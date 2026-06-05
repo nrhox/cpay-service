@@ -1,0 +1,95 @@
+package response
+
+import (
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/validation"
+)
+
+type ErrorWithResponse struct {
+	Err        error
+	Message    string
+	StatusCode int
+	Errors     []validation.ErrorField
+}
+
+var listError = []ErrorWithResponse{
+	{
+		Err:        errmsg.ErrInvalidJson,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrInvalidJson.Error(),
+	},
+	{
+		Err:        errmsg.ErrDataNotFound,
+		StatusCode: http.StatusNotFound,
+		Message:    errmsg.ErrDataNotFound.Error(),
+	},
+	{
+		Err:        errmsg.ErrEmailNotVerify,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrEmailNotVerify.Error(),
+	},
+	{
+		Err:        errmsg.ErrUnsupportProvider,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrUnsupportProvider.Error(),
+	},
+	{
+		Err:        errmsg.ErrMissingToken,
+		StatusCode: http.StatusUnauthorized,
+		Message:    errmsg.ErrMissingToken.Error(),
+	},
+	{
+		Err:        jwt.ErrTokenMalformed,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrTokenMalformed.Error(),
+	},
+	{
+		Err:        jwt.ErrTokenExpired,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrTokenExpired.Error(),
+	},
+	{
+		Err:        jwt.ErrTokenNotValidYet,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrTokenNotValidYet.Error(),
+	},
+	{
+		Err:        jwt.ErrSignatureInvalid,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrSignatureInvalid.Error(),
+	},
+	{
+		Err:        jwt.ErrTokenInvalidId,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrTokenInvalidId.Error(),
+	},
+	{
+		Err:        jwt.ErrTokenUsedBeforeIssued,
+		StatusCode: http.StatusUnauthorized,
+		Message:    jwt.ErrTokenUsedBeforeIssued.Error(),
+	},
+}
+
+func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {
+	for _, target := range listError {
+		if errors.Is(err, target.Err) {
+			Json(w, target.StatusCode, ResJson{
+				Message: target.Message,
+				Errors:  target.Errors,
+			})
+			return
+		}
+	}
+	if log != nil {
+		log.Error(err.Error())
+	}
+
+	Json(w, http.StatusInternalServerError, ResJson{
+		Message: errmsg.ErrInternalServer.Error(),
+	})
+}
