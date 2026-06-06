@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-type MainDataProfile struct {
+type Profile struct {
 	Email        string
 	FullName     string
 	Picture      string
@@ -14,7 +14,7 @@ type MainDataProfile struct {
 
 type AuthProvider interface {
 	GetLoginURL(state string) string
-	ExchangeCodeForUser(ctx context.Context, code string) (*MainDataProfile, error)
+	ExchangeCodeForUser(ctx context.Context, code string) (*Profile, error)
 }
 
 var activeProviders = make(map[string]AuthProvider)
