@@ -109,12 +109,13 @@ func (r *repository) UpsertProvider(ctx context.Context, id bson.ObjectID, prov 
 		},
 	}
 
-	_, err := r.collection.UpdateOne(ctx, filter, update)
+	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errmsg.ErrDataNotFound
-		}
 		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return errmsg.ErrDataNotFound
 	}
 
 	return nil
@@ -173,8 +174,13 @@ func (r *repository) SetStatus(ctx context.Context, id bson.ObjectID, status con
 		},
 	}
 
-	if _, err := r.collection.UpdateOne(ctx, filter, update); err != nil {
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
 		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
 	}
 
 	return nil
