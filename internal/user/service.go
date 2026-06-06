@@ -65,7 +65,7 @@ func (s *Service) Upsert(ctx context.Context, info UserInfo, provider entity.Aut
 	return &user, nil
 }
 
-func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, error) {
+func (s *Service) GetOneNoSuspend(ctx context.Context, id bson.ObjectID) (*entity.User, error) {
 	var user entity.User
 
 	if err := s.userRepo.GetOneNoSuspendById(ctx, id, &user); err != nil {

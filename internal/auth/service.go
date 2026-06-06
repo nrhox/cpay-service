@@ -76,7 +76,7 @@ func (s *Service) RefreshToken(ctx context.Context, tokenId bson.ObjectID, token
 		return nil, err
 	}
 
-	user, err := s.userSvc.GetOne(ctx, session.UserID)
+	user, err := s.userSvc.GetOneNoSuspend(ctx, session.UserID)
 	if err != nil {
 		return nil, err
 	}
