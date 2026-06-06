@@ -15,5 +15,6 @@ func NewRoute(
 		r.With(m.GuestOnly).Get("/{provider}", authH.Login)
 		r.With(m.GuestOnly, m.InjectUser).Get("/{provider}/callback", authH.Callback)
 		r.With(m.IsAuth(true)).Get("/__refresh", authH.RefreshToken)
+		r.With(m.IsAuth(false)).Get("/logout", authH.Logout)
 	})
 }

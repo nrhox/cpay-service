@@ -16,6 +16,7 @@ type Repository interface {
 	Create(ctx context.Context, entity *entity.Session) error
 	IsTokenAlready(ctx context.Context, token string) error
 	GetValidToken(ctx context.Context, session *entity.Session, tokenId bson.ObjectID, token string) error
+	Delete(ctx context.Context, tokenId bson.ObjectID, token string) error
 }
 
 type repository struct {
@@ -80,6 +81,22 @@ func (r *repository) GetValidToken(ctx context.Context, session *entity.Session,
 	}
 
 	if err := res.Decode(session); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) Delete(ctx context.Context, tokenId bson.ObjectID, token string) error {
+	filter := bson.M{
+		"_id":   tokenId,
+		"token": security.HashTokenForStorage(token),
+	}
+
+	_, err := r.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil
+		}
 		return err
 	}
 	return nil

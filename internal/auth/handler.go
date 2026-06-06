@@ -186,3 +186,28 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		Data: accessToken,
 	})
 }
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	credential, err := middleware.GetAuthCredential(ctx)
+	if err != nil {
+		response.Json(w, http.StatusOK, response.ResJson{
+			Data: "ok",
+		})
+		return
+	}
+
+	if err := h.authSvc.Logout(ctx, credential.Id, credential.Token); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	security.DeleteAccessToken(w)
+	security.DeleteRefreshToken(w)
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data: "ok",
+	})
+}

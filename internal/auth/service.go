@@ -74,3 +74,7 @@ func (s *Service) RefreshToken(ctx context.Context, tokenId bson.ObjectID, token
 
 	return user, nil
 }
+
+func (s *Service) Logout(ctx context.Context, tokenId bson.ObjectID, token string) error {
+	return s.sessionSvc.Delete(ctx, tokenId, token)
+}

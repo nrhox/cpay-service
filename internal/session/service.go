@@ -79,3 +79,11 @@ func (s *Service) GetAvailable(ctx context.Context, tokenId bson.ObjectID, token
 
 	return &session, nil
 }
+
+func (s *Service) Delete(ctx context.Context, tokenId bson.ObjectID, token string) error {
+	if err := s.sessionRepo.Delete(ctx, tokenId, token); err != nil {
+		s.log.Error(err.Error())
+		return errmsg.ErrInternalServer
+	}
+	return nil
+}
