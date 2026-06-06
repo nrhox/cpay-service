@@ -113,7 +113,7 @@ func (h *GitHubProvider) ExchangeCodeForUser(ctx context.Context, code string) (
 	}
 
 	if userEmail == "" {
-		return nil, errmsg.ErrEmailNotVerify
+		return nil, errmsg.ErrOauthEmailNotVerify
 	}
 
 	fullName := res.Name

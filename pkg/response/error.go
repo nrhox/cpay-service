@@ -29,14 +29,14 @@ var listError = []ErrorWithResponse{
 		Message:    errmsg.ErrDataNotFound.Error(),
 	},
 	{
-		Err:        errmsg.ErrEmailNotVerify,
+		Err:        errmsg.ErrOauthEmailNotVerify,
 		StatusCode: http.StatusBadRequest,
-		Message:    errmsg.ErrEmailNotVerify.Error(),
+		Message:    errmsg.ErrOauthEmailNotVerify.Error(),
 	},
 	{
-		Err:        errmsg.ErrUnsupportProvider,
+		Err:        errmsg.ErrOauthUnsupport,
 		StatusCode: http.StatusBadRequest,
-		Message:    errmsg.ErrUnsupportProvider.Error(),
+		Message:    errmsg.ErrOauthUnsupport.Error(),
 	},
 	{
 		Err:        errmsg.ErrMissingToken,

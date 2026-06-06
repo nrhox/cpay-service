@@ -73,7 +73,7 @@ func (g *GoogleProvider) ExchangeCodeForUser(ctx context.Context, code string) (
 	}
 
 	if !res.VerifiedEmail {
-		return nil, errmsg.ErrEmailNotVerify
+		return nil, errmsg.ErrOauthEmailNotVerify
 	}
 
 	return &Profile{
