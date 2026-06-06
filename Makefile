@@ -38,3 +38,7 @@ build:
 .PHONY: run-dev
 run-dev: build
 	./$(BINARY_NAME_API)$(FORMAT)
+
+.PHONY: prepare
+prepare:
+	$(PREFIX) run cmd/prepare/main.go
