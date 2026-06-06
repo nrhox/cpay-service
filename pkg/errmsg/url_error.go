@@ -8,4 +8,5 @@ var (
 	ErrOauthhEmptyAuthCode    = errors.New("provider authorization code is empty")
 	ErrOauthAuthProcessFailed = errors.New("authentication subsystem error")
 	ErrOauthEmailNotVerify    = errors.New("email not verified")
+	ErrInComplateUserRegister = errors.New("anda belum melengkapi formulir")
 )
