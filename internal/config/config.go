@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,13 +22,14 @@ const (
 )
 
 type Config struct {
-	AppPort     string
-	FrontendUrl string
-	Mode        ModeApp
-	Mongo       Mongodb
-	Session     Session
-	Providers   Providers
-	UserMock    UserMock
+	AppPort        string
+	FrontendUrl    string
+	Mode           ModeApp
+	Mongo          Mongodb
+	Session        Session
+	Providers      Providers
+	UserMock       UserMock
+	SnowFlakeEpoch int
 }
 
 func Load() *Config {
@@ -36,9 +38,10 @@ func Load() *Config {
 	}
 
 	return &Config{
-		AppPort:     ":" + getEnv("PORT", "8080"),
-		Mode:        parseAppMode(getEnv("MODE", "DEBUG")),
-		FrontendUrl: getEnv("FRONTEND_URL", "http://localhost:3003"),
+		AppPort:        ":" + getEnv("PORT", "8080"),
+		Mode:           parseAppMode(getEnv("MODE", "DEBUG")),
+		FrontendUrl:    getEnv("FRONTEND_URL", "http://localhost:3003"),
+		SnowFlakeEpoch: getIntEnv("SNOW_FLAKE_EPOCH", 1772298000000),
 		Mongo: Mongodb{
 			DbUrl:        getEnv("MONGODB_URI", "mongodb://localhost:27017"),
 			DatabaseName: getEnv("MONGODB_DATABASE", "locker_app"),
@@ -135,4 +138,13 @@ func LoadUserMock() UserMock {
 		WithMock: useMock,
 		MockFile: fileMock,
 	}
+}
+
+func getIntEnv(key string, fallback int) int {
+	if value, ok := os.LookupEnv(key); ok {
+		if val, err := strconv.Atoi(value); err == nil {
+			return val
+		}
+	}
+	return fallback
 }
