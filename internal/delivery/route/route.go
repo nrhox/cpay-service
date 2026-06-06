@@ -28,7 +28,10 @@ func NewRoute(
 			r.Use(m.RoleFlag(constants.RoleAdmin))
 			r.Route("/user", func(r chi.Router) {
 				r.Get("/", userH.GetAllUser)
+				r.Get("/{id}", userH.GetOne)
 			})
 		})
+
+		r.Get("/me", userH.GetMe)
 	})
 }

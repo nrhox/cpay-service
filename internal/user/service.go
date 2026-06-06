@@ -86,3 +86,13 @@ func (s *Service) GetAll(ctx context.Context, notId bson.ObjectID, q utils.Query
 		TotalData: res.TotalData,
 	}, nil
 }
+
+func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, error) {
+	var user entity.User
+
+	if err := s.userRepo.GetOneById(ctx, id, &user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}

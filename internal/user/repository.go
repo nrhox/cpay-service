@@ -21,6 +21,7 @@ type Repository interface {
 	CheckUserStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) (bool, error)
 	SetStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) error
 	GetAll(ctx context.Context, notId bson.ObjectID, q utils.QueryParams) (utils.PaginationResult[entity.User], error)
+	GetOneById(ctx context.Context, id bson.ObjectID, entity *entity.User) error
 }
 
 var fieldAllowSort []string = []string{
@@ -62,6 +63,25 @@ func (r *repository) NewUser(ctx context.Context, entity *entity.User) error {
 func (r *repository) GetOneByEmail(ctx context.Context, email string, entity *entity.User) error {
 	filter := bson.M{
 		"email": email,
+	}
+	res := r.collection.FindOne(ctx, filter)
+	if err := res.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return err
+	}
+
+	if err := res.Decode(entity); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) GetOneById(ctx context.Context, id bson.ObjectID, entity *entity.User) error {
+	filter := bson.M{
+		"_id": id,
 	}
 	res := r.collection.FindOne(ctx, filter)
 	if err := res.Err(); err != nil {

@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/utils"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Handler struct {
@@ -74,5 +76,62 @@ func (h *Handler) GetAllUser(w http.ResponseWriter, r *http.Request) {
 			Message: "Success get all user",
 		},
 		Meta: meta,
+	})
+}
+
+func (h *Handler) GetOne(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	userId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if payload.UserID == userId {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	user, err := h.userSvc.GetOne(ctx, userId)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    user,
+		Message: "Success get user",
+	})
+}
+
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	user, err := h.userSvc.GetOne(ctx, payload.UserID)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    user,
+		Message: "Success",
 	})
 }
