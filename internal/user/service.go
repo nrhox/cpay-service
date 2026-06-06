@@ -11,6 +11,7 @@ import (
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Service struct {
@@ -95,4 +96,26 @@ func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, e
 	}
 
 	return &user, nil
+}
+
+func (s *Service) SetSuspend(ctx context.Context, id bson.ObjectID) error {
+	if err := s.userRepo.SetStatus(ctx, id, constants.UserSuspended); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) SetActive(ctx context.Context, id bson.ObjectID) error {
+	if err := s.userRepo.SetStatus(ctx, id, constants.UserActive); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return err
+	}
+
+	return nil
 }
