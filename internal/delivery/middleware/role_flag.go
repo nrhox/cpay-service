@@ -18,7 +18,7 @@ func (m *Middlware) RoleFlag(flag constants.Role) func(http.Handler) http.Handle
 			}
 
 			if auth.RoleId != flag {
-				response.ParseError(w, errmsg.ErrMissingToken, m.log)
+				response.ParseError(w, errmsg.ErrDataNotFound, m.log)
 				return
 			}
 
