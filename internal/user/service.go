@@ -1,0 +1,63 @@
+package user
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+
+	"github.com/nrhox/cpay-service/internal/constants"
+	"github.com/nrhox/cpay-service/internal/entity"
+	"github.com/nrhox/cpay-service/pkg/errmsg"
+)
+
+type Service struct {
+	userRepo Repository
+	log      *slog.Logger
+}
+
+func NewService(userRepo Repository, log *slog.Logger) *Service {
+	return &Service{
+		userRepo: userRepo,
+		log:      log,
+	}
+}
+
+func (s *Service) Upsert(ctx context.Context, info UserInfo, provider entity.AuthProvider) (*entity.User, error) {
+	var user entity.User
+
+	if err := s.userRepo.GetOneByEmail(ctx, info.Email, &user); err != nil {
+		if !errors.Is(err, errmsg.ErrDataNotFound) {
+			return nil, err
+		}
+	}
+
+	if !user.ID.IsZero() {
+		isInsert := false
+		for _, prov := range user.OAuthProviders {
+			if prov.Provider != provider.Provider {
+				user.OAuthProviders = append(user.OAuthProviders, provider)
+				isInsert = true
+				break
+			}
+		}
+		if isInsert {
+			if err := s.userRepo.UpsertProvider(ctx, user.ID, provider); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if user.ID.IsZero() {
+		user.AvatarUrl = info.AvatarUrl
+		user.Email = info.Email
+		user.FullName = info.FullName
+		user.RoleID = constants.RoleUser
+		user.OAuthProviders = []entity.AuthProvider{provider}
+
+		if err := s.userRepo.NewUser(ctx, &user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
