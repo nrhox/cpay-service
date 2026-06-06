@@ -17,6 +17,8 @@ type Repository interface {
 	GetOneByEmail(ctx context.Context, email string, entity *entity.User) error
 	UpsertProvider(ctx context.Context, id bson.ObjectID, prov entity.AuthProvider) error
 	GetOneNoSuspendById(ctx context.Context, id bson.ObjectID, entity *entity.User) error
+	CheckUserStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) (bool, error)
+	SetStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) error
 }
 
 type repository struct {
@@ -103,6 +105,44 @@ func (r *repository) GetOneNoSuspendById(ctx context.Context, id bson.ObjectID, 
 	}
 
 	if err := res.Decode(entity); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) CheckUserStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) (bool, error) {
+	filter := bson.M{
+		"_id":    id,
+		"status": status,
+	}
+
+	count, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *repository) SetStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) error {
+	filter := bson.M{
+		"_id": id,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+
+	if _, err := r.collection.UpdateOne(ctx, filter, update); err != nil {
 		return err
 	}
 

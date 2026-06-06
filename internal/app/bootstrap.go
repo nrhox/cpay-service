@@ -16,7 +16,9 @@ import (
 	"github.com/nrhox/cpay-service/internal/providers"
 	"github.com/nrhox/cpay-service/internal/session"
 	"github.com/nrhox/cpay-service/internal/user"
+	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/security"
+	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -33,14 +35,18 @@ func (b *Bootstrap) Init() {
 		b.Cfg.Session.JwtPublicKey,
 	)
 
+	snowflake := utils.NewSnowflake(int64(b.Cfg.SnowFlakeEpoch))
+
 	providers.NewGitHubProvider(b.Cfg.Providers.Github)
 
 	userRepo := user.NewRepository(b.DB)
 	sessionRepo := session.NewRepository(b.DB)
+	walletRepo := wallet.NewRepository(b.DB, snowflake)
 
 	userService := user.NewService(userRepo, b.Logger)
 	sessionService := session.NewService(b.Cfg.Session, sessionRepo, b.Logger)
-	authService := auth.NewService(userService, sessionService, b.Logger)
+	walletService := wallet.NewService(walletRepo, b.Logger)
+	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
 

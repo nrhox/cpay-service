@@ -13,8 +13,10 @@ import (
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/internal/providers"
+	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
+	"github.com/nrhox/cpay-service/pkg/rest"
 	"github.com/nrhox/cpay-service/pkg/security"
 )
 
@@ -209,5 +211,36 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	response.Json(w, http.StatusOK, response.ResJson{
 		Data: "ok",
+	})
+}
+
+func (h *Handler) IncomplateRegister(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var req wallet.CreateWallet
+
+	if err := rest.BindJson(r.Body, &req); err != nil {
+		response.ParseError(w, errmsg.ErrInvalidJson, h.log)
+		return
+	}
+
+	if !response.ValidationBody(w, req) {
+		return
+	}
+
+	credential, err := middleware.GetAuthCredential(ctx)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	if err := h.authSvc.IncomplateRegister(ctx, credential.Id, credential.Token, req); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusCreated, response.ResJson{
+		Message: "complate the form",
 	})
 }
