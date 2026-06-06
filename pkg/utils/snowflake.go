@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -27,21 +29,16 @@ func (g *Snowflake) NextID() string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	ts := g.getTimestampMillis()
-	if ts == g.lastStamp {
-		g.sequence = (g.sequence + 1) % 10000
-		if g.sequence == 0 {
-			for ts <= g.lastStamp {
-				ts = g.getTimestampMillis()
-			}
-		}
-	} else {
-		g.sequence = 0
-	}
-
+	ts := max(g.getTimestampMillis(), g.lastStamp)
 	g.lastStamp = ts
 
 	timeDelta := (ts - g.epoch) % 100000000
 
-	return fmt.Sprintf("%08d%04d", timeDelta, g.sequence)
+	randomCrypto, err := rand.Int(rand.Reader, big.NewInt(10000))
+	if err != nil {
+		return ""
+	}
+	suffixRandom := randomCrypto.Int64()
+
+	return fmt.Sprintf("%08d%04d", timeDelta, suffixRandom)
 }
