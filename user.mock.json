@@ -1,0 +1,11 @@
+{
+  "full_name": "mock",
+  "email": "mock@mock.com",
+  "avatar_url": "https://api.dicebear.com/10.x/identicon/svg?seed=mock",
+  "oauth_providers": [
+    {
+      "id": "143rf23r313e31",
+      "provider": "mock"
+    }
+  ]
+}
