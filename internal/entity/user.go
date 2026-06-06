@@ -9,7 +9,7 @@ import (
 
 type User struct {
 	ID             bson.ObjectID        `bson:"_id,omitempty" json:"_id,omitempty"`
-	RoleID         uint8                `bson:"role" json:"role,omitempty"`
+	RoleID         constants.Role       `bson:"role" json:"role,omitempty"`
 	FullName       string               `bson:"full_name" json:"full_name,omitempty"`
 	Email          string               `bson:"email" json:"email,omitempty"`
 	AvatarUrl      string               `bson:"avatar_url" json:"avatar_url,omitempty"`

@@ -1,14 +1,17 @@
 package constants
 
 type (
-	Role       string
+	Role       uint8
 	UserStatus string
 )
 
 const (
-	RoleUser  Role = "USER"
-	RoleAdmin Role = "ADMIN"
+	RoleUser  Role = 1 << 0
+	RoleAdmin Role = 1 << 1
+)
 
-	UserActive    UserStatus = "ACTIVE"
-	UserSuspended UserStatus = "SUSPENDED"
+const (
+	UserActive             UserStatus = "ACTIVE"
+	UserSuspended          UserStatus = "SUSPENDED"
+	UserUncomplateRegister UserStatus = "UNCOMPLATE"
 )
