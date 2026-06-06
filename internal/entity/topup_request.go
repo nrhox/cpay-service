@@ -15,6 +15,4 @@ type TopupRequest struct {
 	Reference   string                      `bson:"reference" json:"reference"`
 	Status      constants.TransactionStatus `bson:"status" json:"status"`
 	RequestedAt time.Time                   `bson:"requested_at" json:"requested_at"`
-	ReviewedAt  *time.Time                  `bson:"reviewed_at,omitempty" json:"reviewed_at,omitempty"`
-	AdminID     *bson.ObjectID              `bson:"admin_id,omitempty" json:"admin_id,omitempty"`
 }
