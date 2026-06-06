@@ -3,12 +3,15 @@ package route
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/auth"
+	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
+	"github.com/nrhox/cpay-service/internal/user"
 )
 
 func NewRoute(
 	r *chi.Mux,
 	authH *auth.Handler,
+	userH *user.Handler,
 	m *middleware.Middlware,
 ) {
 	r.Route("/api/auth", func(r chi.Router) {
@@ -17,5 +20,15 @@ func NewRoute(
 		r.With(m.IsAuth(true)).Post("/incomplate", authH.IncomplateRegister)
 		r.With(m.IsAuth(true)).Get("/__refresh", authH.RefreshToken)
 		r.With(m.IsAuth(false)).Get("/logout", authH.Logout)
+	})
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(m.AccessGuard(true))
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(m.RoleFlag(constants.RoleAdmin))
+			r.Route("/user", func(r chi.Router) {
+				r.Get("/", userH.GetAllUser)
+			})
+		})
 	})
 }

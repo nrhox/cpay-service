@@ -49,10 +49,11 @@ func (b *Bootstrap) Init() {
 	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
+	userHandler := user.NewHandler(userService, b.Logger)
 
 	middleware := middleware.NewMiddlware(tokenManager, b.Logger, b.Cfg)
 
-	route.NewRoute(b.Route, authHandler, middleware)
+	route.NewRoute(b.Route, authHandler, userHandler, middleware)
 }
 
 func (b *Bootstrap) PrintAllRoute() {

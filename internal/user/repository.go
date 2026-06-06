@@ -8,6 +8,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -19,6 +20,16 @@ type Repository interface {
 	GetOneNoSuspendById(ctx context.Context, id bson.ObjectID, entity *entity.User) error
 	CheckUserStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) (bool, error)
 	SetStatus(ctx context.Context, id bson.ObjectID, status constants.UserStatus) error
+	GetAll(ctx context.Context, notId bson.ObjectID, q utils.QueryParams) (utils.PaginationResult[entity.User], error)
+}
+
+var fieldAllowSort []string = []string{
+	"_id",
+	"full_name",
+	"role",
+	"email",
+	"created_at",
+	"updated_at",
 }
 
 type repository struct {
@@ -147,4 +158,39 @@ func (r *repository) SetStatus(ctx context.Context, id bson.ObjectID, status con
 	}
 
 	return nil
+}
+
+func (r *repository) GetAll(ctx context.Context, notId bson.ObjectID, q utils.QueryParams) (utils.PaginationResult[entity.User], error) {
+	filter := bson.M{}
+	excludeFilter := bson.M{"$ne": notId}
+
+	if q.SearchKeyword != "" {
+		likeStartKeyword := "^" + q.SearchKeyword
+		filter = bson.M{
+			"$or": bson.A{
+				bson.M{"_id": bson.M{"$regex": likeStartKeyword, "$options": "i"}},
+				bson.M{"full_name": bson.M{"$regex": likeStartKeyword, "$options": "i"}},
+				bson.M{"email": bson.M{"$regex": likeStartKeyword, "$options": "i"}},
+			},
+			"_id": excludeFilter,
+		}
+	} else {
+		filter = bson.M{
+			"_id": excludeFilter,
+		}
+	}
+
+	res, err := utils.Paginate[entity.User](ctx, r.collection, utils.PaginationParam{
+		Page:      q.Page,
+		Limit:     q.Limit,
+		SortBy:    q.SortBy,
+		SortOrder: utils.ValidateSortField(fieldAllowSort, q.SortOrder, "created_at"),
+		Filter:    filter,
+	})
+
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
 }

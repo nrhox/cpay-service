@@ -8,6 +8,8 @@ import (
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/response"
+	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -71,4 +73,16 @@ func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, e
 	}
 
 	return &user, nil
+}
+
+func (s *Service) GetAll(ctx context.Context, notId bson.ObjectID, q utils.QueryParams) ([]entity.User, response.ResMetaPaginate, error) {
+	res, err := s.userRepo.GetAll(ctx, notId, q)
+	if err != nil {
+		return nil, response.ResMetaPaginate{}, err
+	}
+
+	return res.Data, response.ResMetaPaginate{
+		TotalPage: res.TotalPage,
+		TotalData: res.TotalData,
+	}, nil
 }
