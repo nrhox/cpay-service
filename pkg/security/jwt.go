@@ -39,8 +39,8 @@ func NewTokenManager(pemPrivateKey string, pemPublicKey string) *TokenManager {
 }
 
 type AuthPayload struct {
-	UserID string               `json:"user_id"`
-	RoleId constants.UserStatus `json:"role_id"`
+	UserID string         `json:"user_id"`
+	RoleId constants.Role `json:"role_id"`
 }
 
 type AuthClaim struct {
