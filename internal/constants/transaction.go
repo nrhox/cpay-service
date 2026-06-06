@@ -15,3 +15,16 @@ const (
 	StatusFailed    TransactionStatus = "FAILED"
 	StatusCancelled TransactionStatus = "CANCELLED"
 )
+
+func (t TransactionType) Short() string {
+	switch t {
+	case TypeTopup:
+		return "TP"
+	case TypeTransfer:
+		return "TF"
+	case TypePayment:
+		return "PY"
+	default:
+		return "TX"
+	}
+}
