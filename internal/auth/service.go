@@ -10,6 +10,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/session"
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Service struct {
@@ -54,4 +55,22 @@ func (s *Service) LoginUser(ctx context.Context, data *providers.Profile) (sessi
 	}
 
 	return session, newUser.Status != constants.UserUncomplateRegister, nil
+}
+
+func (s *Service) RefreshToken(ctx context.Context, tokenId bson.ObjectID, token string) (*entity.User, error) {
+	session, err := s.sessionSvc.GetAvailable(ctx, tokenId, token)
+	if err != nil {
+		return nil, err
+	}
+
+	if session == nil {
+		return nil, err
+	}
+
+	user, err := s.userSvc.GetOne(ctx, session.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

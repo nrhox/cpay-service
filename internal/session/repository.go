@@ -7,6 +7,7 @@ import (
 
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/security"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -14,6 +15,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, entity *entity.Session) error
 	IsTokenAlready(ctx context.Context, token string) error
+	GetValidToken(ctx context.Context, session *entity.Session, tokenId bson.ObjectID, token string) error
 }
 
 type repository struct {
@@ -57,5 +59,28 @@ func (r *repository) IsTokenAlready(ctx context.Context, token string) error {
 		return errmsg.ErrTokenAlreadyExists
 	}
 
+	return nil
+}
+
+func (r *repository) GetValidToken(ctx context.Context, session *entity.Session, tokenId bson.ObjectID, token string) error {
+	filter := bson.M{
+		"_id":   tokenId,
+		"token": security.HashTokenForStorage(token),
+		"expired_at": bson.M{
+			"$gte": time.Now(),
+		},
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return res.Err()
+	}
+
+	if err := res.Decode(session); err != nil {
+		return err
+	}
 	return nil
 }

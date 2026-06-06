@@ -16,6 +16,7 @@ type Repository interface {
 	NewUser(ctx context.Context, entity *entity.User) error
 	GetOneByEmail(ctx context.Context, email string, entity *entity.User) error
 	UpsertProvider(ctx context.Context, id bson.ObjectID, prov entity.AuthProvider) error
+	GetOneNoSuspendById(ctx context.Context, id bson.ObjectID, entity *entity.User) error
 }
 
 type repository struct {
@@ -80,6 +81,28 @@ func (r *repository) UpsertProvider(ctx context.Context, id bson.ObjectID, prov 
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errmsg.ErrDataNotFound
 		}
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) GetOneNoSuspendById(ctx context.Context, id bson.ObjectID, entity *entity.User) error {
+	filter := bson.M{
+		"_id": id,
+		"status": bson.M{
+			"$ne": constants.UserSuspended,
+		},
+	}
+	res := r.collection.FindOne(ctx, filter)
+	if err := res.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return err
+	}
+
+	if err := res.Decode(entity); err != nil {
 		return err
 	}
 

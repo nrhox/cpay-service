@@ -8,6 +8,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Service struct {
@@ -57,6 +58,16 @@ func (s *Service) Upsert(ctx context.Context, info UserInfo, provider entity.Aut
 		if err := s.userRepo.NewUser(ctx, &user); err != nil {
 			return nil, err
 		}
+	}
+
+	return &user, nil
+}
+
+func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, error) {
+	var user entity.User
+
+	if err := s.userRepo.GetOneNoSuspendById(ctx, id, &user); err != nil {
+		return nil, err
 	}
 
 	return &user, nil

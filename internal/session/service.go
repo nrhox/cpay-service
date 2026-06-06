@@ -66,3 +66,16 @@ func (s *Service) Create(ctx context.Context, userId bson.ObjectID) (*entity.Ses
 	newSession.Token = token
 	return &newSession, nil
 }
+
+func (s *Service) GetAvailable(ctx context.Context, tokenId bson.ObjectID, token string) (*entity.Session, error) {
+	var session entity.Session
+	if err := s.sessionRepo.GetValidToken(ctx, &session, tokenId, token); err != nil {
+		if errors.Is(err, errmsg.ErrDataNotFound) {
+			return nil, err
+		}
+		s.log.Error(err.Error())
+		return nil, errmsg.ErrInternalServer
+	}
+
+	return &session, nil
+}

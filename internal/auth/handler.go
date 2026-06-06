@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/config"
 	"github.com/nrhox/cpay-service/internal/constants"
+	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/internal/providers"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
@@ -80,35 +81,43 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	var profile *providers.Profile
 
-	providerName := chi.URLParam(r, "provider")
+	userInject, _ := middleware.GetUserInjection(ctx)
 
-	provider := providers.Get(providerName)
-	if provider == nil {
-		h.RedirectToFrontendError(w, r, "err_oauth_unsupport")
-		return
+	if userInject != nil {
+		profile = userInject
 	}
 
-	state := r.FormValue("state")
-	state = strings.TrimSuffix(state, "__"+providerName)
-	if !security.ValidateDynamicToken(state, h.sessionConfig.SaltKey) {
-		h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
-		return
-	}
+	if userInject == nil {
+		providerName := chi.URLParam(r, "provider")
 
-	code := r.FormValue("code")
-	if code == "" {
-		h.RedirectToFrontendError(w, r, "err_oauthh_empty_auth_code")
-		return
-	}
+		provider := providers.Get(providerName)
+		if provider == nil {
+			h.RedirectToFrontendError(w, r, "err_oauth_unsupport")
+			return
+		}
 
-	profileData, err := provider.ExchangeCodeForUser(ctx, code)
-	if err != nil {
-		h.log.Error(err.Error())
-		h.RedirectToFrontendError(w, r, "err_oauth_auth_process_failed")
-		return
-	}
+		state := r.FormValue("state")
+		state = strings.TrimSuffix(state, "__"+providerName)
+		if !security.ValidateDynamicToken(state, h.sessionConfig.SaltKey) {
+			h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
+			return
+		}
 
-	profile = profileData
+		code := r.FormValue("code")
+		if code == "" {
+			h.RedirectToFrontendError(w, r, "err_oauthh_empty_auth_code")
+			return
+		}
+
+		profileData, err := provider.ExchangeCodeForUser(ctx, code)
+		if err != nil {
+			h.log.Error(err.Error())
+			h.RedirectToFrontendError(w, r, "err_oauth_auth_process_failed")
+			return
+		}
+
+		profile = profileData
+	}
 
 	session, isComplate, err := h.authSvc.LoginUser(ctx, profile)
 	if err != nil {
@@ -118,9 +127,62 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	security.SetRefreshToken(w, h.sessionConfig.RefreshDuration, session.Token+"."+strings.ToUpper(session.ID.Hex()))
 
-	if isComplate {
-		http.Redirect(w, r, h.frontendUrl, http.StatusTemporaryRedirect)
-	} else {
+	if userInject == nil {
+		if isComplate {
+			http.Redirect(w, r, h.frontendUrl, http.StatusTemporaryRedirect)
+			return
+		}
+
 		http.Redirect(w, r, h.frontendUrl+constants.INCOMPLATE_PAGE, http.StatusTemporaryRedirect)
+		return
 	}
+
+	if isComplate {
+		response.Json(w, http.StatusOK, response.ResJson{
+			Data: "ok",
+		})
+		return
+	}
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data: "incomplate",
+	})
+}
+
+func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	credential, err := middleware.GetAuthCredential(ctx)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	user, err := h.authSvc.RefreshToken(ctx, credential.Id, credential.Token)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	if user.Status == constants.UserUncomplateRegister {
+		response.Json(w, http.StatusBadRequest, response.ResJson{
+			Message: errmsg.ErrInComplateUserRegister.Error(),
+		})
+		return
+	}
+
+	accessToken, err := h.tokenManager.Sign(security.AuthPayload{
+		UserID: user.ID.Hex(),
+		RoleId: user.RoleID,
+	}, h.sessionConfig.AccessTokenDuration)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	security.SetAccessToken(w, h.sessionConfig.AccessTokenDuration, accessToken)
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data: accessToken,
+	})
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/auth"
 	"github.com/nrhox/cpay-service/internal/config"
+	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/internal/delivery/route"
 	"github.com/nrhox/cpay-service/internal/providers"
 	"github.com/nrhox/cpay-service/internal/session"
@@ -43,7 +44,9 @@ func (b *Bootstrap) Init() {
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
 
-	route.NewRoute(b.Route, authHandler)
+	middleware := middleware.NewMiddlware(tokenManager, b.Logger, b.Cfg)
+
+	route.NewRoute(b.Route, authHandler, middleware)
 }
 
 func (b *Bootstrap) PrintAllRoute() {
