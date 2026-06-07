@@ -42,3 +42,17 @@ func (s *Service) CreateWallet(ctx context.Context, userId bson.ObjectID, dto Cr
 
 	return &newWallet, nil
 }
+
+func (s *Service) GetAllWalletByUserID(ctx context.Context, userId bson.ObjectID) ([]entity.Wallet, error) {
+	wallets, err := s.walletRepo.GetAllByUserId(ctx, userId)
+	if err != nil {
+		s.log.Error(err.Error())
+		return nil, err
+	}
+
+	return wallets, nil
+}
+
+func (s *Service) SetPrimary(ctx context.Context, userId bson.ObjectID, data SetPrimaryWallet) error {
+	return s.walletRepo.SetOnePrimary(ctx, userId, data.WalletId)
+}

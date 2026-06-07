@@ -20,6 +20,8 @@ type Repository interface {
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
 	SetAllStatusByUserId(ctx context.Context, userId bson.ObjectID, status constants.WalletStatus) error
+	GetAllByUserId(ctx context.Context, userId bson.ObjectID) ([]entity.Wallet, error)
+	SetOnePrimary(ctx context.Context, userId bson.ObjectID, walletId bson.ObjectID) error
 }
 
 type repository struct {
@@ -147,5 +149,55 @@ func (r *repository) SetAllStatusByUserId(ctx context.Context, userId bson.Objec
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *repository) GetAllByUserId(ctx context.Context, userId bson.ObjectID) ([]entity.Wallet, error) {
+	filter := bson.M{"user_id": userId}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var wallets []entity.Wallet
+	if err := cursor.All(ctx, &wallets); err != nil {
+		return nil, err
+	}
+
+	return wallets, nil
+}
+
+func (r *repository) SetOnePrimary(ctx context.Context, userId bson.ObjectID, walletId bson.ObjectID) error {
+	filterWallet := bson.M{"_id": walletId, "user_id": userId}
+	updateWallet := bson.M{"$set": bson.M{"is_primary": true}}
+
+	resSpesific, err := r.collection.UpdateOne(ctx, filterWallet, updateWallet)
+	if err != nil {
+		return err
+	}
+
+	if resSpesific.MatchedCount == 0 {
+		return errmsg.ErrWalletNotFound
+	}
+
+	if resSpesific.ModifiedCount == 0 {
+		return nil
+	}
+
+	filterAllWallet := bson.M{
+		"user_id": userId,
+		"_id": bson.M{
+			"$ne": walletId,
+		},
+	}
+	update := bson.M{"$set": bson.M{"is_primary": false}}
+
+	_, err = r.collection.UpdateMany(ctx, filterAllWallet, update)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
