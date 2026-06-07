@@ -48,7 +48,7 @@ func (b *Bootstrap) Init() {
 	topUpRepo := topup_request.NewRepository(b.DB, referenceGen)
 	transactionRepo := transaction.NewRepository(b.DB, referenceGen)
 
-	userService := user.NewService(userRepo, b.Logger)
+	userService := user.NewService(userRepo, walletRepo, b.Logger)
 	sessionService := session.NewService(b.Cfg.Session, sessionRepo, b.Logger)
 	walletService := wallet.NewService(walletRepo, b.Logger)
 	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)

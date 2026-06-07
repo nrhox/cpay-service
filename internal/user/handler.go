@@ -192,7 +192,7 @@ func (h *Handler) SetActiveUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userSvc.SetSuspend(ctx, userId); err != nil {
+	if err := h.userSvc.SetActive(ctx, userId); err != nil {
 		response.ParseError(w, err, h.log)
 		return
 	}

@@ -19,6 +19,7 @@ type Repository interface {
 	FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
+	SetAllStatusByUserId(ctx context.Context, userId bson.ObjectID, status constants.WalletStatus) error
 }
 
 type repository struct {
@@ -128,5 +129,23 @@ func (r *repository) UpdateBalance(ctx context.Context, id bson.ObjectID, amount
 		return errmsg.ErrBalanceDecreases
 	}
 
+	return nil
+}
+
+func (r *repository) SetAllStatusByUserId(ctx context.Context, userId bson.ObjectID, status constants.WalletStatus) error {
+	filter := bson.M{
+		"user_id": userId,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+
+	_, err := r.collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return err
+	}
 	return nil
 }
