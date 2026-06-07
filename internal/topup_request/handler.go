@@ -7,11 +7,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/rest"
 	"github.com/nrhox/cpay-service/pkg/utils"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Handler struct {
@@ -102,5 +104,29 @@ func (h *Handler) GetAllTopUp(w http.ResponseWriter, r *http.Request) {
 			Message: "Success get all requests",
 		},
 		Meta: meta,
+	})
+}
+
+func (h *Handler) GetOneById(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	topupId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	topUp, err := h.topupSvc.GetOneById(ctx, topupId)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    topUp,
+		Message: "Success get top up",
 	})
 }

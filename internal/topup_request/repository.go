@@ -2,10 +2,12 @@ package topup_request
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
+	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -22,6 +24,7 @@ var fieldAllowSort []string = []string{
 type Repository interface {
 	Create(ctx context.Context, entity *entity.TopupRequest) error
 	GetAll(ctx context.Context, q utils.QueryParams) (utils.PaginationResult[entity.TopupRequest], error)
+	GetOneById(ctx context.Context, id bson.ObjectID, entity *entity.TopupRequest) error
 }
 
 type repository struct {
@@ -88,4 +91,23 @@ func (r *repository) GetAll(ctx context.Context, q utils.QueryParams) (utils.Pag
 	}
 
 	return res, nil
+}
+
+func (r *repository) GetOneById(ctx context.Context, id bson.ObjectID, entity *entity.TopupRequest) error {
+	filter := bson.M{
+		"_id": id,
+	}
+	res := r.collection.FindOne(ctx, filter)
+	if err := res.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return errmsg.ErrDataNotFound
+		}
+		return err
+	}
+
+	if err := res.Decode(entity); err != nil {
+		return err
+	}
+
+	return nil
 }

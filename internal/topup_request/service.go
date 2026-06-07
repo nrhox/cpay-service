@@ -99,3 +99,12 @@ func (s *Service) GetAll(ctx context.Context, q utils.QueryParams) ([]entity.Top
 		TotalData: res.TotalData,
 	}, nil
 }
+
+func (s *Service) GetOneById(ctx context.Context, id bson.ObjectID) (*entity.TopupRequest, error) {
+	var topUp entity.TopupRequest
+	if err := s.topupRepo.GetOneById(ctx, id, &topUp); err != nil {
+		return nil, err
+	}
+
+	return &topUp, nil
+}
