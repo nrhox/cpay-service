@@ -38,6 +38,8 @@ func NewRoute(
 			r.Route("/top-up", func(r chi.Router) {
 				r.Get("/", topUpH.GetAllTopUp)
 				r.Get("/{id}", topUpH.GetOneById)
+				r.Put("/{id}/approved", topUpH.SetApproved)
+				r.Put("/{id}/reject", topUpH.SetReject)
 			})
 		})
 

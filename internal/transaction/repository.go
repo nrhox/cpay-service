@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -12,6 +13,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, entity *entity.Transaction) error
+	UpdateTopUpState(ctx context.Context, refCode string, status constants.TransactionStatus, balanceBefore uint64, balanceAfter uint64) error
 }
 
 type repository struct {
@@ -45,6 +47,31 @@ func (r *repository) Create(ctx context.Context, entity *entity.Transaction) err
 
 	if oid, ok := res.InsertedID.(bson.ObjectID); ok {
 		entity.ID = oid
+	}
+
+	return nil
+}
+
+func (r *repository) UpdateTopUpState(
+	ctx context.Context,
+	refCode string,
+	status constants.TransactionStatus,
+	balanceBefore uint64,
+	balanceAfter uint64,
+) error {
+	filter := bson.M{"reference": refCode}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status":                     status,
+			"destination.balance_before": balanceBefore,
+			"destination.balance_after":  balanceAfter,
+		},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
 	}
 
 	return nil

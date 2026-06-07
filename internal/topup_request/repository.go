@@ -25,6 +25,7 @@ type Repository interface {
 	Create(ctx context.Context, entity *entity.TopupRequest) error
 	GetAll(ctx context.Context, q utils.QueryParams) (utils.PaginationResult[entity.TopupRequest], error)
 	GetOneById(ctx context.Context, id bson.ObjectID, entity *entity.TopupRequest) error
+	SetStatus(ctx context.Context, id bson.ObjectID, status constants.TransactionStatus) error
 }
 
 type repository struct {
@@ -107,6 +108,29 @@ func (r *repository) GetOneById(ctx context.Context, id bson.ObjectID, entity *e
 
 	if err := res.Decode(entity); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *repository) SetStatus(ctx context.Context, id bson.ObjectID, status constants.TransactionStatus) error {
+	filter := bson.M{
+		"_id": id,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
 	}
 
 	return nil

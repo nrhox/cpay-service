@@ -7,6 +7,7 @@ import (
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
+	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -16,6 +17,8 @@ type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
 	FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
+	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
+	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
 }
 
 type repository struct {
@@ -82,5 +85,48 @@ func (r *repository) FindByAccounNumber(ctx context.Context, userId bson.ObjectI
 	if err := res.Decode(data); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *repository) FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error {
+	filter := bson.M{
+		"_id": id,
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error {
+	filter := bson.M{
+		"_id": id,
+	}
+
+	if amount < 0 {
+		filter["balance"] = bson.M{"$gte": -amount}
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"balance": amount,
+		},
+	}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if res.ModifiedCount == 0 && amount < 0 {
+		return errmsg.ErrBalanceDecreases
+	}
+
 	return nil
 }

@@ -130,3 +130,51 @@ func (h *Handler) GetOneById(w http.ResponseWriter, r *http.Request) {
 		Message: "Success get top up",
 	})
 }
+
+func (h *Handler) SetApproved(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	topupId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	topUp, err := h.topupSvc.SetApproved(ctx, topupId)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    topUp,
+		Message: "Success approved",
+	})
+}
+
+func (h *Handler) SetReject(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	topupId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	topUp, err := h.topupSvc.SetReject(ctx, topupId)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    topUp,
+		Message: "Success approved",
+	})
+}

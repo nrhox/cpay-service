@@ -3,6 +3,7 @@ package topup_request
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
@@ -21,6 +22,7 @@ type Service struct {
 	userRepo        user.Repository
 	walletRepo      wallet.Repository
 	transactionRepo transaction.Repository
+	mu              sync.Mutex
 }
 
 func NewService(
@@ -105,6 +107,84 @@ func (s *Service) GetOneById(ctx context.Context, id bson.ObjectID) (*entity.Top
 	if err := s.topupRepo.GetOneById(ctx, id, &topUp); err != nil {
 		return nil, err
 	}
+
+	return &topUp, nil
+}
+
+func (s *Service) SetApproved(ctx context.Context, id bson.ObjectID) (*entity.TopupRequest, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var topUp entity.TopupRequest
+	if err := s.topupRepo.GetOneById(ctx, id, &topUp); err != nil {
+		return nil, err
+	}
+
+	var wallet entity.Wallet
+	if err := s.walletRepo.FindById(ctx, topUp.WalletID, &wallet); err != nil {
+		return nil, err
+	}
+
+	if wallet.Status != constants.WalletActive {
+		return nil, errmsg.ErrWalletNotFound
+	}
+
+	if err := s.walletRepo.UpdateBalance(ctx, wallet.ID, int(topUp.Amount)); err != nil {
+		return nil, err
+	}
+
+	if err := s.transactionRepo.UpdateTopUpState(
+		ctx,
+		topUp.Reference,
+		constants.StatusSuccess,
+		wallet.Balance,
+		wallet.Balance+topUp.Amount,
+	); err != nil {
+		return nil, err
+	}
+
+	if err := s.topupRepo.SetStatus(ctx, id, constants.StatusSuccess); err != nil {
+		return nil, err
+	}
+
+	topUp.Status = constants.StatusSuccess
+
+	return &topUp, nil
+}
+
+func (s *Service) SetReject(ctx context.Context, id bson.ObjectID) (*entity.TopupRequest, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var topUp entity.TopupRequest
+	if err := s.topupRepo.GetOneById(ctx, id, &topUp); err != nil {
+		return nil, err
+	}
+
+	var wallet entity.Wallet
+	if err := s.walletRepo.FindById(ctx, topUp.WalletID, &wallet); err != nil {
+		return nil, err
+	}
+
+	if wallet.Status != constants.WalletActive {
+		return nil, errmsg.ErrWalletNotFound
+	}
+
+	if err := s.transactionRepo.UpdateTopUpState(
+		ctx,
+		topUp.Reference,
+		constants.StatusCancelled,
+		wallet.Balance,
+		wallet.Balance,
+	); err != nil {
+		return nil, err
+	}
+
+	if err := s.topupRepo.SetStatus(ctx, id, constants.StatusCancelled); err != nil {
+		return nil, err
+	}
+
+	topUp.Status = constants.StatusCancelled
 
 	return &topUp, nil
 }
