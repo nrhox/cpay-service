@@ -5,6 +5,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/auth"
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
+	"github.com/nrhox/cpay-service/internal/topup_request"
 	"github.com/nrhox/cpay-service/internal/user"
 )
 
@@ -12,6 +13,7 @@ func NewRoute(
 	r *chi.Mux,
 	authH *auth.Handler,
 	userH *user.Handler,
+	topUpH *topup_request.Handler,
 	m *middleware.Middlware,
 ) {
 	r.Route("/api/auth", func(r chi.Router) {
@@ -35,5 +37,7 @@ func NewRoute(
 		})
 
 		r.Get("/me", userH.GetMe)
+
+		r.Post("/top-up", topUpH.RequestTopup)
 	})
 }
