@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -14,6 +15,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
+	FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
 }
 
 type repository struct {
@@ -63,4 +65,22 @@ func (r *repository) AvailableWalletPrimary(ctx context.Context, userId bson.Obj
 		return true, nil
 	}
 	return false, nil
+}
+
+func (r *repository) FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
+	filter := bson.M{
+		"account_number": accountNumber,
+		"status":         constants.WalletActive,
+		"user_id":        userId,
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
+	return nil
 }
