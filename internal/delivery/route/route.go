@@ -34,6 +34,10 @@ func NewRoute(
 				r.Post("/{id}/suspend", userH.SetSuspendUser)
 				r.Post("/{id}/active", userH.SetActiveUser)
 			})
+
+			r.Route("/top-up", func(r chi.Router) {
+				r.Get("/", topUpH.GetAllTopUp)
+			})
 		})
 
 		r.Get("/me", userH.GetMe)

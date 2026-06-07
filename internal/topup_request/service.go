@@ -10,6 +10,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -85,4 +86,16 @@ func (s *Service) CreateRequest(ctx context.Context, userId bson.ObjectID, dto R
 	}
 
 	return &newTopUp, nil
+}
+
+func (s *Service) GetAll(ctx context.Context, q utils.QueryParams) ([]entity.TopupRequest, response.ResMetaPaginate, error) {
+	res, err := s.topupRepo.GetAll(ctx, q)
+	if err != nil {
+		return nil, response.ResMetaPaginate{}, err
+	}
+
+	return res.Data, response.ResMetaPaginate{
+		TotalPage: res.TotalPage,
+		TotalData: res.TotalData,
+	}, nil
 }

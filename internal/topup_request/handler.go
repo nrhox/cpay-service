@@ -4,12 +4,14 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/rest"
+	"github.com/nrhox/cpay-service/pkg/utils"
 )
 
 type Handler struct {
@@ -57,5 +59,48 @@ func (h *Handler) RequestTopup(w http.ResponseWriter, r *http.Request) {
 	response.Json(w, http.StatusCreated, response.ResJson{
 		Data:    topUp,
 		Message: "Success create request",
+	})
+}
+
+func (h *Handler) GetAllTopUp(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	queryParams := r.URL.Query()
+
+	qKeyword := queryParams.Get("q")
+	qSort := queryParams.Get("sort")
+	qOrder := queryParams.Get("order_by")
+
+	pageStr := queryParams.Get("page")
+	page, err := strconv.ParseInt(pageStr, 10, 64)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	limitStr := queryParams.Get("limit")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	requests, meta, err := h.topupSvc.GetAll(ctx, utils.QueryParams{
+		Page:          page,
+		Limit:         limit,
+		SortBy:        qSort,
+		SortOrder:     qOrder,
+		SearchKeyword: qKeyword,
+	})
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.JsonPaginate(w, http.StatusOK, response.ResJsonPaginate{
+		ResJson: response.ResJson{
+			Data:    requests,
+			Message: "Success get all requests",
+		},
+		Meta: meta,
 	})
 }
