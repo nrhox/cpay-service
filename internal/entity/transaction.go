@@ -8,10 +8,11 @@ import (
 )
 
 type TransactionParty struct {
-	UserID        bson.ObjectID `bson:"user_id" json:"user_id"`
+	UserID   bson.ObjectID `bson:"user_id" json:"user_id"`
+	Username string        `bson:"username" json:"username"`
+
 	WalletID      bson.ObjectID `bson:"wallet_id" json:"wallet_id"`
 	WalletName    string        `bson:"wallet_name" json:"wallet_name"`
-	AccountName   string        `bson:"account_name" json:"account_name"`
 	AccountNumber string        `bson:"account_number" json:"account_number"`
 
 	BalanceBefore uint64  `bson:"balance_before" json:"balance_before"`
