@@ -9,4 +9,7 @@ var (
 	ErrInfiniteLoop       = errors.New("error infinite loop")
 	ErrMissingToken       = errors.New("missing token")
 	ErrTokenAlreadyExists = errors.New("token is already exists")
+
+	ErrUserNotFound   = errors.New("user not found")
+	ErrWalletNotFound = errors.New("wallet not found")
 )

@@ -73,6 +73,16 @@ var listError = []ErrorWithResponse{
 		StatusCode: http.StatusUnauthorized,
 		Message:    jwt.ErrTokenUsedBeforeIssued.Error(),
 	},
+	{
+		Err:        errmsg.ErrUserNotFound,
+		StatusCode: http.StatusNotFound,
+		Message:    errmsg.ErrUserNotFound.Error(),
+	},
+	{
+		Err:        errmsg.ErrWalletNotFound,
+		StatusCode: http.StatusNotFound,
+		Message:    errmsg.ErrWalletNotFound.Error(),
+	},
 }
 
 func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {
