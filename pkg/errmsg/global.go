@@ -10,6 +10,7 @@ var (
 	ErrMissingToken       = errors.New("missing token")
 	ErrTokenAlreadyExists = errors.New("token is already exists")
 
-	ErrUserNotFound   = errors.New("user not found")
-	ErrWalletNotFound = errors.New("wallet not found")
+	ErrUserNotFound     = errors.New("user not found")
+	ErrWalletNotFound   = errors.New("wallet not found")
+	ErrBalanceDecreases = errors.New("maaf saldo anda tidak cukup")
 )

@@ -83,6 +83,11 @@ var listError = []ErrorWithResponse{
 		StatusCode: http.StatusNotFound,
 		Message:    errmsg.ErrWalletNotFound.Error(),
 	},
+	{
+		Err:        errmsg.ErrBalanceDecreases,
+		StatusCode: http.StatusNotFound,
+		Message:    errmsg.ErrBalanceDecreases.Error(),
+	},
 }
 
 func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {
