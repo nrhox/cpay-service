@@ -10,6 +10,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
+	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -53,7 +54,7 @@ func (s *Service) CreateRequest(ctx context.Context, userId bson.ObjectID, dto R
 
 	newTransaction := entity.Transaction{
 		Type:   constants.TypeTopup,
-		Title:  "Top up sebesar",
+		Title:  "Top up sebesar " + utils.FormatCurrencyByRegion(float64(dto.Amount), "ID"),
 		Amount: dto.Amount,
 		Status: constants.StatusPending,
 		Destination: &entity.TransactionParty{
