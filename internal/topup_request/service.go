@@ -48,7 +48,7 @@ func (s *Service) CreateRequest(ctx context.Context, userId bson.ObjectID, dto R
 
 	var wallet entity.Wallet
 
-	if err := s.walletRepo.FindByAccounNumber(ctx, userId, dto.WalletNumber, &wallet); err != nil {
+	if err := s.walletRepo.FindByAccounNumberWithUser(ctx, userId, dto.WalletNumber, &wallet); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errmsg.ErrWalletNotFound
 		}

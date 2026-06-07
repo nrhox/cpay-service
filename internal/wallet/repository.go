@@ -16,7 +16,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
-	FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
+	FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
 	SetAllStatusByUserId(ctx context.Context, userId bson.ObjectID, status constants.WalletStatus) error
@@ -73,7 +73,7 @@ func (r *repository) AvailableWalletPrimary(ctx context.Context, userId bson.Obj
 	return false, nil
 }
 
-func (r *repository) FindByAccounNumber(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
+func (r *repository) FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
 	filter := bson.M{
 		"account_number": accountNumber,
 		"status":         constants.WalletActive,
