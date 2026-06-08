@@ -23,7 +23,7 @@ type Transaction struct {
 	ID        bson.ObjectID             `bson:"_id,omitempty" json:"id"`
 	Reference string                    `bson:"reference" json:"reference"`
 	Type      constants.TransactionType `bson:"type" json:"type"`
-	Title     string                    `bson:"title" json:"title"`
+	Note      string                    `bson:"note,omitempty" json:"note,omitempty"`
 
 	Amount   uint64                      `bson:"amount" json:"amount"`
 	Currency string                      `bson:"currency" json:"currency"`

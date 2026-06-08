@@ -57,7 +57,6 @@ func (s *Service) CreateRequest(ctx context.Context, userId bson.ObjectID, dto R
 
 	newTransaction := entity.Transaction{
 		Type:   constants.TypeTopup,
-		Title:  "Top up sebesar " + utils.FormatCurrencyByRegion(float64(dto.Amount), "ID"),
 		Amount: dto.Amount,
 		Status: constants.StatusPending,
 		Destination: &entity.TransactionParty{
