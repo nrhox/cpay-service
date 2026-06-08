@@ -88,6 +88,17 @@ var listError = []ErrorWithResponse{
 		StatusCode: http.StatusNotFound,
 		Message:    errmsg.ErrBalanceDecreases.Error(),
 	},
+	{
+		Err:        errmsg.ErrDestionationWalletNotFound,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrDataNotFound.Error(),
+		Errors: []validation.ErrorField{
+			{
+				Field:   "destination",
+				Message: errmsg.ErrDestionationWalletNotFound.Error(),
+			},
+		},
+	},
 }
 
 func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {
