@@ -27,6 +27,8 @@ type Repository interface {
 	GetAllByUserId(ctx context.Context, userId bson.ObjectID, q utils.QueryParams) (utils.PaginationResult[entity.PaymentCode], error)
 	FindByCode(ctx context.Context, code string, data *entity.PaymentCode) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.PaymentCode) error
+	SetStatus(ctx context.Context, id bson.ObjectID, status constants.PaymentCodeStatus) error
+	SetStatusByUserId(ctx context.Context, userId bson.ObjectID, code string, status constants.PaymentCodeStatus) error
 }
 
 type repository struct {
@@ -155,5 +157,52 @@ func (r *repository) FindById(ctx context.Context, id bson.ObjectID, data *entit
 	if err := res.Decode(data); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *repository) SetStatus(ctx context.Context, id bson.ObjectID, status constants.PaymentCodeStatus) error {
+	filter := bson.M{
+		"_id": id,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (r *repository) SetStatusByUserId(ctx context.Context, userId bson.ObjectID, code string, status constants.PaymentCodeStatus) error {
+	filter := bson.M{
+		"code":    code,
+		"user_id": userId,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
 	return nil
 }

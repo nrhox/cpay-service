@@ -51,6 +51,7 @@ func NewRoute(
 				r.Get("/", paymentCode.GetAll)
 				r.Get("/{id}", paymentCode.FindById)
 				r.Get("/user/{id}", paymentCode.GetAllByUserId)
+				r.Delete("/{id}/cancel", paymentCode.SetCancelByAdmin)
 			})
 		})
 
@@ -62,8 +63,9 @@ func NewRoute(
 
 		r.Route("/payment", func(r chi.Router) {
 			r.Get("/", paymentCode.GetAllMyCode)
-			r.Get("/{code}", paymentCode.FindByCode)
 			r.Post("/create", paymentCode.CreatePaymentCode)
+			r.Get("/{code}", paymentCode.FindByCode)
+			r.Delete("/{code}/cancel", paymentCode.SetCancelByUser)
 		})
 
 		r.Get("/me", userH.GetMe)

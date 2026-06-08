@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
@@ -97,6 +98,14 @@ func (s *Service) FindById(ctx context.Context, id bson.ObjectID) (*entity.Payme
 		return nil, err
 	}
 
+	if paymentCode.Status == constants.PaymentActive && paymentCode.ExpiresAt.Before(time.Now()) {
+		if err := s.paymentRepo.SetStatus(ctx, paymentCode.ID, constants.PaymentExpired); err != nil {
+			return nil, err
+		}
+
+		paymentCode.Status = constants.PaymentExpired
+	}
+
 	return &paymentCode, nil
 }
 
@@ -109,5 +118,29 @@ func (s *Service) FindByCode(ctx context.Context, code string) (*entity.PaymentC
 		return nil, err
 	}
 
+	if paymentCode.Status == constants.PaymentActive && paymentCode.ExpiresAt.Before(time.Now()) {
+		if err := s.paymentRepo.SetStatus(ctx, paymentCode.ID, constants.PaymentExpired); err != nil {
+			return nil, err
+		}
+
+		paymentCode.Status = constants.PaymentExpired
+	}
+
 	return &paymentCode, nil
+}
+
+func (s *Service) SetCancelByAdmin(ctx context.Context, id bson.ObjectID) error {
+	if err := s.paymentRepo.SetStatus(ctx, id, constants.PaymentCancelled); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) SetCancelByUser(ctx context.Context, userId bson.ObjectID, code string) error {
+	if err := s.paymentRepo.SetStatusByUserId(ctx, userId, code, constants.PaymentCancelled); err != nil {
+		return err
+	}
+
+	return nil
 }

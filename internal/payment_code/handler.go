@@ -265,3 +265,51 @@ func (h *Handler) FindByCode(w http.ResponseWriter, r *http.Request) {
 		Message: "success get payment code",
 	})
 }
+
+func (h *Handler) SetCancelByAdmin(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	paymentId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if err := h.paymentService.SetCancelByAdmin(ctx, paymentId); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "ok",
+	})
+}
+
+func (h *Handler) SetCancelByUser(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	pCode := chi.URLParam(r, "code")
+	if len(pCode) != 14 || !strings.HasPrefix(pCode, constants.TypePayment.Short()) {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if err := h.paymentService.SetCancelByUser(ctx, payload.UserID, pCode); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "ok",
+	})
+}
