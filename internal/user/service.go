@@ -7,25 +7,21 @@ import (
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
-	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Service struct {
-	userRepo   Repository
-	walletRepo wallet.Repository
-	log        *slog.Logger
+	userRepo Repository
+	log      *slog.Logger
 }
 
-func NewService(userRepo Repository, walletRepo wallet.Repository, log *slog.Logger) *Service {
+func NewService(userRepo Repository, log *slog.Logger) *Service {
 	return &Service{
-		userRepo:   userRepo,
-		walletRepo: walletRepo,
-		log:        log,
+		userRepo: userRepo,
+		log:      log,
 	}
 }
 
@@ -99,33 +95,4 @@ func (s *Service) GetOne(ctx context.Context, id bson.ObjectID) (*entity.User, e
 	}
 
 	return &user, nil
-}
-
-func (s *Service) SetSuspend(ctx context.Context, id bson.ObjectID) error {
-	if err := s.userRepo.SetStatus(ctx, id, constants.UserSuspended); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errmsg.ErrDataNotFound
-		}
-		return err
-	}
-
-	if err := s.walletRepo.SetAllStatusByUserId(ctx, id, constants.WalletSuspended); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Service) SetActive(ctx context.Context, id bson.ObjectID) error {
-	if err := s.userRepo.SetStatus(ctx, id, constants.UserActive); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errmsg.ErrDataNotFound
-		}
-		return err
-	}
-
-	if err := s.walletRepo.SetAllStatusByUserId(ctx, id, constants.WalletActive); err != nil {
-		return err
-	}
-	return nil
 }
