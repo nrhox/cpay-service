@@ -34,8 +34,8 @@ func NewRoute(
 				r.Get("/", userH.GetAllUser)
 				r.Get("/{id}", userH.GetOne)
 				r.Get("/{id}/wallet", walletH.GetWalletUser)
-				r.Put("/{id}/suspend", userH.SetSuspendUser)
-				r.Put("/{id}/active", userH.SetActiveUser)
+				r.Put("/{id}/suspend", walletH.SetSuspendUser)
+				r.Put("/{id}/active", walletH.SetActiveUser)
 			})
 
 			r.Route("/top-up", func(r chi.Router) {
@@ -46,13 +46,14 @@ func NewRoute(
 			})
 		})
 
-		r.Get("/me", userH.GetMe)
-		r.Post("/top-up", topUpH.RequestTopup)
-
 		r.Route("/wallet", func(r chi.Router) {
 			r.Post("/", walletH.NewWallet)
 			r.Get("/", walletH.GetMyWallet)
 			r.Put("/", walletH.SetPrimaryWallet)
 		})
+
+		r.Get("/me", userH.GetMe)
+		r.Post("/top-up", topUpH.RequestTopup)
+		r.Post("/transfer", walletH.TransferBalance)
 	})
 }

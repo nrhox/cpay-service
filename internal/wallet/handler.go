@@ -138,3 +138,102 @@ func (h *Handler) SetPrimaryWallet(w http.ResponseWriter, r *http.Request) {
 		Message: "success set primary",
 	})
 }
+
+func (h *Handler) SetSuspendUser(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	userId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if payload.UserID == userId {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if err := h.walletSvc.SetSuspend(ctx, userId); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "Success suspend",
+	})
+}
+
+func (h *Handler) SetActiveUser(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	pId := chi.URLParam(r, "id")
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	userId, err := bson.ObjectIDFromHex(pId)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if payload.UserID == userId {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
+
+	if err := h.walletSvc.SetActive(ctx, userId); err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "Success active",
+	})
+}
+
+func (h *Handler) TransferBalance(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	var req TransferBalance
+
+	if err := rest.BindJson(r.Body, &req); err != nil {
+		response.ParseError(w, errmsg.ErrInvalidJson, h.log)
+		return
+	}
+
+	if ok := response.ValidationBody(w, req); !ok {
+		return
+	}
+
+	transaction, err := h.walletSvc.Transfer(ctx, payload.UserID, req)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "Success transfer",
+		Data:    transaction,
+	})
+}

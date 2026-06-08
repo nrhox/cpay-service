@@ -17,8 +17,10 @@ type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
 	FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
+	FindActiveByAccountNumber(ctx context.Context, accountNumber string, data *entity.Wallet) error
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
+	FindActiveByIdWithUser(ctx context.Context, id bson.ObjectID, userId bson.ObjectID, data *entity.Wallet) error
 	SetAllStatusByUserId(ctx context.Context, userId bson.ObjectID, status constants.WalletStatus) error
 	GetAllByUserId(ctx context.Context, userId bson.ObjectID) ([]entity.Wallet, error)
 	SetOnePrimary(ctx context.Context, userId bson.ObjectID, walletId bson.ObjectID) error
@@ -78,6 +80,23 @@ func (r *repository) FindByAccounNumberWithUser(ctx context.Context, userId bson
 		"account_number": accountNumber,
 		"status":         constants.WalletActive,
 		"user_id":        userId,
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) FindActiveByAccountNumber(ctx context.Context, accountNumber string, data *entity.Wallet) error {
+	filter := bson.M{
+		"account_number": accountNumber,
+		"status":         constants.WalletActive,
 	}
 
 	res := r.collection.FindOne(ctx, filter)
@@ -199,5 +218,18 @@ func (r *repository) SetOnePrimary(ctx context.Context, userId bson.ObjectID, wa
 		return err
 	}
 
+	return nil
+}
+
+func (r *repository) FindActiveByIdWithUser(ctx context.Context, walletId bson.ObjectID, userId bson.ObjectID, data *entity.Wallet) error {
+	filter := bson.M{"_id": walletId, "user_id": userId, "status": constants.WalletActive}
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
 	return nil
 }
