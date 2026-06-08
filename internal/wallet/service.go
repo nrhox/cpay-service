@@ -175,3 +175,25 @@ func (s *Service) Transfer(ctx context.Context, userId bson.ObjectID, data Trans
 
 	return &newTransaction, nil
 }
+
+func (s *Service) GetOneByAccountNumber(ctx context.Context, userId *bson.ObjectID, accountNumber string) (*entity.Wallet, error) {
+	var wallet entity.Wallet
+
+	if userId != nil {
+		if err := s.walletRepo.FindByAccounNumberWithUser(ctx, *userId, accountNumber, &wallet); err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, errmsg.ErrDataNotFound
+			}
+			return nil, err
+		}
+	} else {
+		if err := s.walletRepo.FindByAccountNumber(ctx, accountNumber, constants.WalletActive, &wallet); err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, errmsg.ErrDataNotFound
+			}
+			return nil, err
+		}
+	}
+
+	return &wallet, nil
+}

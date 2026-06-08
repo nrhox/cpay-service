@@ -16,8 +16,10 @@ import (
 type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
+	FindActiveByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
 	FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
 	FindActiveByAccountNumber(ctx context.Context, accountNumber string, data *entity.Wallet) error
+	FindByAccountNumber(ctx context.Context, accountNumber string, status constants.WalletStatus, data *entity.Wallet) error
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
 	FindById(ctx context.Context, id bson.ObjectID, data *entity.Wallet) error
 	FindActiveByIdWithUser(ctx context.Context, id bson.ObjectID, userId bson.ObjectID, data *entity.Wallet) error
@@ -75,10 +77,27 @@ func (r *repository) AvailableWalletPrimary(ctx context.Context, userId bson.Obj
 	return false, nil
 }
 
-func (r *repository) FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
+func (r *repository) FindActiveByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
 	filter := bson.M{
 		"account_number": accountNumber,
 		"status":         constants.WalletActive,
+		"user_id":        userId,
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
+	filter := bson.M{
+		"account_number": accountNumber,
 		"user_id":        userId,
 	}
 
@@ -97,6 +116,23 @@ func (r *repository) FindActiveByAccountNumber(ctx context.Context, accountNumbe
 	filter := bson.M{
 		"account_number": accountNumber,
 		"status":         constants.WalletActive,
+	}
+
+	res := r.collection.FindOne(ctx, filter)
+	if res.Err() != nil {
+		return res.Err()
+	}
+
+	if err := res.Decode(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *repository) FindByAccountNumber(ctx context.Context, accountNumber string, status constants.WalletStatus, data *entity.Wallet) error {
+	filter := bson.M{
+		"account_number": accountNumber,
+		"status":         status,
 	}
 
 	res := r.collection.FindOne(ctx, filter)

@@ -237,3 +237,34 @@ func (h *Handler) TransferBalance(w http.ResponseWriter, r *http.Request) {
 		Data:    transaction,
 	})
 }
+
+func (h *Handler) GetWalletByAccountNumber(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var userId *bson.ObjectID
+	userId = nil
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err == nil {
+		userId = &payload.UserID
+	}
+
+	pNumber := chi.URLParam(r, "account_number")
+
+	if len(pNumber) != 12 {
+		response.ParseError(w, errmsg.ErrWalletNotFound, h.log)
+		return
+	}
+
+	wallet, err := h.walletSvc.GetOneByAccountNumber(ctx, userId, pNumber)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Data:    wallet,
+		Message: "success get one wallet",
+	})
+}

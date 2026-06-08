@@ -58,6 +58,7 @@ func NewRoute(
 		r.Route("/wallet", func(r chi.Router) {
 			r.Post("/", walletH.NewWallet)
 			r.Get("/", walletH.GetMyWallet)
+			r.Get("/{account_number}", walletH.GetWalletByAccountNumber)
 			r.Put("/", walletH.SetPrimaryWallet)
 		})
 
