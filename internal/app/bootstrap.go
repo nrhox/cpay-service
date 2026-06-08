@@ -13,6 +13,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/config"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/internal/delivery/route"
+	"github.com/nrhox/cpay-service/internal/payment_code"
 	"github.com/nrhox/cpay-service/internal/providers"
 	"github.com/nrhox/cpay-service/internal/session"
 	"github.com/nrhox/cpay-service/internal/topup_request"
@@ -47,21 +48,32 @@ func (b *Bootstrap) Init() {
 	walletRepo := wallet.NewRepository(b.DB, snowflake)
 	topUpRepo := topup_request.NewRepository(b.DB, referenceGen)
 	transactionRepo := transaction.NewRepository(b.DB, referenceGen)
+	paymentCodeRepo := payment_code.NewRepository(b.DB, referenceGen, b.Cfg)
 
 	userService := user.NewService(userRepo, b.Logger)
 	sessionService := session.NewService(b.Cfg.Session, sessionRepo, b.Logger)
 	walletService := wallet.NewService(walletRepo, transactionRepo, userRepo, b.Logger)
 	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)
 	topUpService := topup_request.NewService(topUpRepo, userRepo, walletRepo, transactionRepo)
+	paymentCodeService := payment_code.NewService(paymentCodeRepo, walletRepo, userRepo, b.Logger)
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
 	userHandler := user.NewHandler(userService, b.Logger)
 	topUpHandler := topup_request.NewHandler(topUpService, b.Logger)
 	walletHandler := wallet.NewHandler(walletService, b.Logger)
+	paymentCodeHandler := payment_code.NewHandler(paymentCodeService, b.Logger)
 
 	middleware := middleware.NewMiddlware(tokenManager, b.Logger, b.Cfg)
 
-	route.NewRoute(b.Route, authHandler, userHandler, topUpHandler, walletHandler, middleware)
+	route.NewRoute(
+		b.Route,
+		authHandler,
+		userHandler,
+		topUpHandler,
+		walletHandler,
+		paymentCodeHandler,
+		middleware,
+	)
 }
 
 func (b *Bootstrap) PrintAllRoute() {

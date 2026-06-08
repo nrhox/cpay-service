@@ -30,6 +30,7 @@ type Config struct {
 	Providers      Providers
 	UserMock       UserMock
 	SnowFlakeEpoch int
+	MaxPaymentTIme time.Duration
 }
 
 func Load() *Config {
@@ -42,6 +43,7 @@ func Load() *Config {
 		Mode:           parseAppMode(getEnv("MODE", "DEBUG")),
 		FrontendUrl:    getEnv("FRONTEND_URL", "http://localhost:3003"),
 		SnowFlakeEpoch: getIntEnv("SNOW_FLAKE_EPOCH", 1772298000000),
+		MaxPaymentTIme: getDurationEnv("MAX_PAYMENT_TIME", 1*time.Hour),
 		Mongo: Mongodb{
 			DbUrl:        getEnv("MONGODB_URI", "mongodb://localhost:27017"),
 			DatabaseName: getEnv("MONGODB_DATABASE", "locker_app"),

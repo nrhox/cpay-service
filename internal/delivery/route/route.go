@@ -5,6 +5,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/auth"
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
+	"github.com/nrhox/cpay-service/internal/payment_code"
 	"github.com/nrhox/cpay-service/internal/topup_request"
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/internal/wallet"
@@ -16,6 +17,7 @@ func NewRoute(
 	userH *user.Handler,
 	topUpH *topup_request.Handler,
 	walletH *wallet.Handler,
+	paymentCode *payment_code.Handler,
 	m *middleware.Middlware,
 ) {
 	r.Route("/api/auth", func(r chi.Router) {
@@ -44,12 +46,24 @@ func NewRoute(
 				r.Put("/{id}/approved", topUpH.SetApproved)
 				r.Put("/{id}/reject", topUpH.SetReject)
 			})
+
+			r.Route("/payment-code", func(r chi.Router) {
+				r.Get("/", paymentCode.GetAll)
+				r.Get("/{id}", paymentCode.FindById)
+				r.Get("/user/{id}", paymentCode.GetAllByUserId)
+			})
 		})
 
 		r.Route("/wallet", func(r chi.Router) {
 			r.Post("/", walletH.NewWallet)
 			r.Get("/", walletH.GetMyWallet)
 			r.Put("/", walletH.SetPrimaryWallet)
+		})
+
+		r.Route("/payment", func(r chi.Router) {
+			r.Get("/", paymentCode.GetAllMyCode)
+			r.Get("/{code}", paymentCode.FindByCode)
+			r.Post("/create", paymentCode.CreatePaymentCode)
 		})
 
 		r.Get("/me", userH.GetMe)
