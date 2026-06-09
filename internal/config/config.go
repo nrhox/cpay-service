@@ -31,6 +31,7 @@ type Config struct {
 	UserMock       UserMock
 	SnowFlakeEpoch int
 	MaxPaymentTIme time.Duration
+	AllowOrigin    []string
 }
 
 func Load() *Config {
@@ -44,6 +45,7 @@ func Load() *Config {
 		FrontendUrl:    getEnv("FRONTEND_URL", "http://localhost:3003"),
 		SnowFlakeEpoch: getIntEnv("SNOW_FLAKE_EPOCH", 1772298000000),
 		MaxPaymentTIme: getDurationEnv("MAX_PAYMENT_TIME", 1*time.Hour),
+		AllowOrigin:    strings.Split(getEnv("ALLOW_ORIGIN", "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"), ","),
 		Mongo: Mongodb{
 			DbUrl:        getEnv("MONGODB_URI", "mongodb://localhost:27017"),
 			DatabaseName: getEnv("MONGODB_DATABASE", "locker_app"),

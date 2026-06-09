@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/nrhox/cpay-service/internal/app"
 	"github.com/nrhox/cpay-service/internal/config"
 	"github.com/nrhox/cpay-service/pkg/database"
@@ -40,6 +41,8 @@ func main() {
 	)
 
 	r := chi.NewRouter()
+	r.Use(setupCORS(cfg))
+
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello"))
 	})
@@ -54,4 +57,14 @@ func main() {
 	appBootstrap.PrintAllRoute()
 
 	http.ListenAndServe(cfg.AppPort, r)
+}
+
+func setupCORS(cfg *config.Config) func(http.Handler) http.Handler {
+	return cors.Handler(cors.Options{
+		AllowedOrigins:   cfg.AllowOrigin,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	})
 }
