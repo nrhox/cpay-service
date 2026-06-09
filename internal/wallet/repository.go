@@ -11,6 +11,7 @@ import (
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Repository interface {
@@ -209,8 +210,9 @@ func (r *repository) SetAllStatusByUserId(ctx context.Context, userId bson.Objec
 
 func (r *repository) GetAllByUserId(ctx context.Context, userId bson.ObjectID) ([]entity.Wallet, error) {
 	filter := bson.M{"user_id": userId}
+	projection := bson.M{"pin": 0}
 
-	cursor, err := r.collection.Find(ctx, filter)
+	cursor, err := r.collection.Find(ctx, filter, options.Find().SetProjection(projection))
 	if err != nil {
 		return nil, err
 	}

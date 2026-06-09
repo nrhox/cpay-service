@@ -59,6 +59,8 @@ func (s *Service) CreateWallet(ctx context.Context, userId bson.ObjectID, dto Cr
 		return nil, err
 	}
 
+	newWallet.Pin = ""
+
 	return &newWallet, nil
 }
 
@@ -206,6 +208,8 @@ func (s *Service) GetOneByAccountNumber(ctx context.Context, userId *bson.Object
 			return nil, err
 		}
 	}
+
+	wallet.Pin = ""
 
 	return &wallet, nil
 }
