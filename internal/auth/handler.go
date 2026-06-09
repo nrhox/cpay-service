@@ -156,6 +156,8 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	credential, err := middleware.GetAuthCredential(ctx)
 	if err != nil {
+		security.DeleteRefreshToken(w)
+		security.DeleteAccessToken(w)
 		response.ParseError(w, err, h.log)
 		return
 	}
