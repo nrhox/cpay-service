@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/nrhox/cpay-service/internal/app"
@@ -42,6 +43,8 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(setupCORS(cfg))
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello"))
