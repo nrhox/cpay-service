@@ -29,7 +29,7 @@ func (s *Service) Upsert(ctx context.Context, info UserInfo, provider entity.Aut
 	var user entity.User
 
 	if err := s.userRepo.GetOneByEmail(ctx, info.Email, &user); err != nil {
-		if !errors.Is(err, errmsg.ErrDataNotFound) {
+		if !errors.Is(err, errmsg.ErrUserNotFound) {
 			return nil, err
 		}
 	}
