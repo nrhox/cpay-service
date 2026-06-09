@@ -4,6 +4,7 @@ import "go.mongodb.org/mongo-driver/v2/bson"
 
 type CreateWallet struct {
 	Name string `json:"wallet_name" validate:"required,alphanumspace"`
+	Pin  string `json:"pin" validate:"required,len=6,number"`
 }
 
 type SetPrimaryWallet struct {
@@ -15,4 +16,5 @@ type TransferBalance struct {
 	DestionationWallet string        `json:"destination" validate:"required,number,len=12"`
 	Amount             uint64        `json:"amount" validate:"required,number"`
 	Note               string        `json:"note" validate:"omitempty,max=50"`
+	Pin                string        `json:"pin" validate:"required,len=6,number"`
 }

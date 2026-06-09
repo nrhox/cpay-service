@@ -13,6 +13,7 @@ import (
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
@@ -39,11 +40,18 @@ func (s *Service) CreateWallet(ctx context.Context, userId bson.ObjectID, dto Cr
 		return nil, err
 	}
 
+	pinHash, err := bcrypt.GenerateFromPassword([]byte(dto.Pin), 12)
+	if err != nil {
+		s.log.Error(err.Error())
+		return nil, err
+	}
+
 	newWallet := entity.Wallet{
 		UserID:    userId,
 		Status:    constants.WalletActive,
 		Name:      dto.Name,
 		IsPrimary: availablePrimary,
+		Pin:       string(pinHash),
 	}
 
 	if err := s.walletRepo.Create(ctx, &newWallet); err != nil {
@@ -119,6 +127,10 @@ func (s *Service) Transfer(ctx context.Context, userId bson.ObjectID, data Trans
 
 	if currentWallet.ID == destinationWallet.ID {
 		return nil, errmsg.ErrDestionationWalletNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(currentWallet.Pin), []byte(data.Pin)); err != nil {
+		return nil, errmsg.ErrPinNoMatch
 	}
 
 	var currentUser entity.User

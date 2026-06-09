@@ -14,4 +14,6 @@ var (
 	ErrWalletNotFound             = errors.New("wallet not found")
 	ErrBalanceDecreases           = errors.New("maaf saldo anda tidak cukup")
 	ErrDestionationWalletNotFound = errors.New("maaf rekening tujuan tidak ditemukan")
+	ErrPinNoMatch                 = errors.New("pin tidak cocok")
+	ErrUncomplateForm             = errors.New("formulir tidak lengkap")
 )

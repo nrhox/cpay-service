@@ -15,6 +15,7 @@ type Wallet struct {
 	Balance       uint64                 `bson:"balance" json:"balance"`
 	Status        constants.WalletStatus `bson:"status" json:"status"`
 	IsPrimary     bool                   `bson:"is_primary" json:"is_primary"`
+	Pin           string                 `bson:"pin" json:"pin,omitempty"`
 	CreatedAt     time.Time              `bson:"created_at" json:"created_at"`
 	UpdatedAt     time.Time              `bson:"updated_at" json:"updated_at"`
 }

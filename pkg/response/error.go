@@ -91,11 +91,22 @@ var listError = []ErrorWithResponse{
 	{
 		Err:        errmsg.ErrDestionationWalletNotFound,
 		StatusCode: http.StatusBadRequest,
-		Message:    errmsg.ErrDataNotFound.Error(),
+		Message:    errmsg.ErrUncomplateForm.Error(),
 		Errors: []validation.ErrorField{
 			{
 				Field:   "destination",
 				Message: errmsg.ErrDestionationWalletNotFound.Error(),
+			},
+		},
+	},
+	{
+		Err:        errmsg.ErrPinNoMatch,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrUncomplateForm.Error(),
+		Errors: []validation.ErrorField{
+			{
+				Field:   "pin",
+				Message: errmsg.ErrPinNoMatch.Error(),
 			},
 		},
 	},
