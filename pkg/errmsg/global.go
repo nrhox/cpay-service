@@ -16,4 +16,5 @@ var (
 	ErrDestionationWalletNotFound = errors.New("maaf rekening tujuan tidak ditemukan")
 	ErrPinNoMatch                 = errors.New("pin tidak cocok")
 	ErrUncomplateForm             = errors.New("formulir tidak lengkap")
+	ErrPaymentCodeNotFound        = errors.New("kode pembayaran tidak ditemukan")
 )

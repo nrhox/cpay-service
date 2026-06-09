@@ -110,6 +110,17 @@ var listError = []ErrorWithResponse{
 			},
 		},
 	},
+	{
+		Err:        errmsg.ErrPaymentCodeNotFound,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrUncomplateForm.Error(),
+		Errors: []validation.ErrorField{
+			{
+				Field:   "payment_code",
+				Message: errmsg.ErrPaymentCodeNotFound.Error(),
+			},
+		},
+	},
 }
 
 func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {

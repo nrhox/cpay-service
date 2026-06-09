@@ -55,7 +55,7 @@ func (b *Bootstrap) Init() {
 	walletService := wallet.NewService(walletRepo, transactionRepo, userRepo, b.Logger)
 	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)
 	topUpService := topup_request.NewService(topUpRepo, userRepo, walletRepo, transactionRepo)
-	paymentCodeService := payment_code.NewService(paymentCodeRepo, walletRepo, userRepo, b.Logger)
+	paymentCodeService := payment_code.NewService(paymentCodeRepo, walletRepo, userRepo, transactionRepo, b.Logger)
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
 	userHandler := user.NewHandler(userService, b.Logger)

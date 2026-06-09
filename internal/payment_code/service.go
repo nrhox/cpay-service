@@ -9,6 +9,7 @@ import (
 
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/entity"
+	"github.com/nrhox/cpay-service/internal/transaction"
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/internal/wallet"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
@@ -16,22 +17,25 @@ import (
 	"github.com/nrhox/cpay-service/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
-	walletRepo  wallet.Repository
-	userRepo    user.Repository
-	paymentRepo Repository
-	log         *slog.Logger
-	mu          sync.Mutex
+	walletRepo      wallet.Repository
+	userRepo        user.Repository
+	paymentRepo     Repository
+	transactionRepo transaction.Repository
+	log             *slog.Logger
+	mu              sync.Mutex
 }
 
-func NewService(paymentRepo Repository, walletRepo wallet.Repository, userRepo user.Repository, log *slog.Logger) *Service {
+func NewService(paymentRepo Repository, walletRepo wallet.Repository, userRepo user.Repository, transactionRepo transaction.Repository, log *slog.Logger) *Service {
 	return &Service{
-		paymentRepo: paymentRepo,
-		walletRepo:  walletRepo,
-		userRepo:    userRepo,
-		log:         log,
+		paymentRepo:     paymentRepo,
+		walletRepo:      walletRepo,
+		userRepo:        userRepo,
+		transactionRepo: transactionRepo,
+		log:             log,
 	}
 }
 
@@ -143,4 +147,107 @@ func (s *Service) SetCancelByUser(ctx context.Context, userId bson.ObjectID, cod
 	}
 
 	return nil
+}
+
+func (s *Service) PayingCode(ctx context.Context, userId bson.ObjectID, data CreetePayingTransaction) (*entity.Transaction, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var payCode entity.PaymentCode
+	if err := s.paymentRepo.FindByCode(ctx, data.PaymentCode, &payCode); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errmsg.ErrPaymentCodeNotFound
+		}
+		return nil, err
+	}
+
+	if payCode.Status != constants.PaymentActive || payCode.ExpiresAt.Before(time.Now()) {
+		if err := s.paymentRepo.SetStatus(ctx, payCode.ID, constants.PaymentExpired); err != nil {
+			return nil, err
+		}
+
+		return nil, errmsg.ErrPaymentCodeNotFound
+	}
+
+	if payCode.WalletID == data.WalletId {
+		return nil, errmsg.ErrDestionationWalletNotFound
+	}
+
+	var destinationWallet entity.Wallet
+	if err := s.walletRepo.FindById(ctx, payCode.WalletID, &destinationWallet); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errmsg.ErrDestionationWalletNotFound
+		}
+		return nil, err
+	}
+
+	var currentWallet entity.Wallet
+	if err := s.walletRepo.FindActiveByIdWithUser(ctx, data.WalletId, userId, &currentWallet); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errmsg.ErrWalletNotFound
+		}
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(currentWallet.Pin), []byte(data.Pin)); err != nil {
+		return nil, errmsg.ErrPinNoMatch
+	}
+
+	var currentUser entity.User
+	if err := s.userRepo.FindUserActiveById(ctx, userId, &currentUser); err != nil {
+		return nil, err
+	}
+
+	var destionationUser entity.User
+	if err := s.userRepo.FindUserActiveById(ctx, destinationWallet.UserID, &destionationUser); err != nil {
+		return nil, err
+	}
+
+	// update current wallet
+	if err := s.walletRepo.UpdateBalance(ctx, currentWallet.ID, -int(payCode.Amount)); err != nil {
+		return nil, err
+	}
+
+	// update destionation wallet
+	if err := s.walletRepo.UpdateBalance(ctx, destinationWallet.ID, int(payCode.Amount)); err != nil {
+		return nil, err
+	}
+
+	if err := s.paymentRepo.SetStatus(ctx, payCode.ID, constants.PaymentPaid); err != nil {
+		return nil, err
+	}
+
+	currentBalanceAfter := currentWallet.Balance - payCode.Amount
+	destionationBalanceAfter := destinationWallet.Balance + payCode.Amount
+
+	newTransaction := entity.Transaction{
+		Type:   constants.TypeTransfer,
+		Amount: payCode.Amount,
+		Status: constants.StatusSuccess,
+
+		Source: &entity.TransactionParty{
+			UserID:        currentUser.ID,
+			Username:      currentUser.FullName,
+			WalletID:      currentWallet.ID,
+			WalletName:    currentWallet.Name,
+			AccountNumber: currentWallet.AccountNumber,
+			BalanceBefore: currentWallet.Balance,
+			BalanceAfter:  &currentBalanceAfter,
+		},
+		Destination: &entity.TransactionParty{
+			UserID:        destionationUser.ID,
+			Username:      destionationUser.FullName,
+			WalletID:      destinationWallet.ID,
+			WalletName:    destinationWallet.Name,
+			AccountNumber: destinationWallet.AccountNumber,
+			BalanceBefore: destinationWallet.Balance,
+			BalanceAfter:  &destionationBalanceAfter,
+		},
+	}
+
+	if err := s.transactionRepo.Create(ctx, &newTransaction); err != nil {
+		return nil, err
+	}
+
+	return &newTransaction, nil
 }

@@ -64,6 +64,7 @@ func NewRoute(
 
 		r.Route("/payment", func(r chi.Router) {
 			r.Get("/", paymentCode.GetAllMyCode)
+			r.Post("/", paymentCode.PayingCode)
 			r.Post("/create", paymentCode.CreatePaymentCode)
 			r.Get("/{code}", paymentCode.FindByCode)
 			r.Delete("/{code}/cancel", paymentCode.SetCancelByUser)

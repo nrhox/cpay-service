@@ -313,3 +313,36 @@ func (h *Handler) SetCancelByUser(w http.ResponseWriter, r *http.Request) {
 		Message: "ok",
 	})
 }
+
+func (h *Handler) PayingCode(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	payload, err := middleware.GetPayloadUser(ctx)
+	if err != nil {
+		response.ParseError(w, errmsg.ErrMissingToken, h.log)
+		return
+	}
+
+	var req CreetePayingTransaction
+
+	if err := rest.BindJson(r.Body, &req); err != nil {
+		response.ParseError(w, errmsg.ErrInvalidJson, h.log)
+		return
+	}
+
+	if ok := response.ValidationBody(w, req); !ok {
+		return
+	}
+
+	paymentCode, err := h.paymentService.PayingCode(ctx, payload.UserID, req)
+	if err != nil {
+		response.ParseError(w, err, h.log)
+		return
+	}
+
+	response.Json(w, http.StatusOK, response.ResJson{
+		Message: "Success pay",
+		Data:    paymentCode,
+	})
+}
