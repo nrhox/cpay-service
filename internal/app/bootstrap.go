@@ -56,12 +56,14 @@ func (b *Bootstrap) Init() {
 	authService := auth.NewService(userService, userRepo, sessionService, walletService, b.Logger)
 	topUpService := topup_request.NewService(topUpRepo, userRepo, walletRepo, transactionRepo)
 	paymentCodeService := payment_code.NewService(paymentCodeRepo, walletRepo, userRepo, transactionRepo, b.Logger)
+	transactionService := transaction.NewService(transactionRepo, b.Logger)
 
 	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
 	userHandler := user.NewHandler(userService, b.Logger)
 	topUpHandler := topup_request.NewHandler(topUpService, b.Logger)
 	walletHandler := wallet.NewHandler(walletService, b.Logger)
 	paymentCodeHandler := payment_code.NewHandler(paymentCodeService, b.Logger)
+	transactionHandler := transaction.NewHandler(transactionService, b.Logger)
 
 	middleware := middleware.NewMiddlware(tokenManager, b.Logger, b.Cfg)
 
@@ -72,6 +74,7 @@ func (b *Bootstrap) Init() {
 		topUpHandler,
 		walletHandler,
 		paymentCodeHandler,
+		transactionHandler,
 		middleware,
 	)
 }

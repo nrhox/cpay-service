@@ -7,6 +7,7 @@ import (
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/internal/payment_code"
 	"github.com/nrhox/cpay-service/internal/topup_request"
+	"github.com/nrhox/cpay-service/internal/transaction"
 	"github.com/nrhox/cpay-service/internal/user"
 	"github.com/nrhox/cpay-service/internal/wallet"
 )
@@ -18,6 +19,7 @@ func NewRoute(
 	topUpH *topup_request.Handler,
 	walletH *wallet.Handler,
 	paymentCode *payment_code.Handler,
+	transactionH *transaction.Handler,
 	m *middleware.Middlware,
 ) {
 	r.Route("/api/auth", func(r chi.Router) {
@@ -68,6 +70,12 @@ func NewRoute(
 			r.Post("/create", paymentCode.CreatePaymentCode)
 			r.Get("/{code}", paymentCode.FindByCode)
 			r.Delete("/{code}/cancel", paymentCode.SetCancelByUser)
+		})
+
+		r.Route("/transaction", func(r chi.Router) {
+			r.Get("/{ref_code}", transactionH.GetOneByRefCurrentUser)
+			r.Get("/", transactionH.GetMyTransaction)
+			r.Get("/wallet/{account_number}", transactionH.GetMyTransactionByAccountNumber)
 		})
 
 		r.Get("/me", userH.GetMe)
