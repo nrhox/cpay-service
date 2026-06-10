@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
 	"github.com/nrhox/cpay-service/pkg/errmsg"
 	"github.com/nrhox/cpay-service/pkg/response"
