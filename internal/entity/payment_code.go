@@ -8,7 +8,7 @@ import (
 )
 
 type PaymentCode struct {
-	ID        bson.ObjectID               `bson:"_id,omitempty" json:"id"`
+	ID        bson.ObjectID               `bson:"_id,omitempty" json:"_id"`
 	UserID    bson.ObjectID               `bson:"user_id" json:"user_id"`
 	WalletID  bson.ObjectID               `bson:"wallet_id" json:"wallet_id"`
 	Merchant  string                      `bson:"merchant" json:"merchant"`

@@ -8,7 +8,7 @@ import (
 )
 
 type Wallet struct {
-	ID            bson.ObjectID          `bson:"_id,omitempty" json:"id"`
+	ID            bson.ObjectID          `bson:"_id,omitempty" json:"_id"`
 	UserID        bson.ObjectID          `bson:"user_id" json:"user_id"`
 	Name          string                 `bson:"name" json:"name"`
 	AccountNumber string                 `bson:"account_number" json:"account_number"`

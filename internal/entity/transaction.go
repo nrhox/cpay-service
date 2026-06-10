@@ -20,7 +20,7 @@ type TransactionParty struct {
 }
 
 type Transaction struct {
-	ID        bson.ObjectID             `bson:"_id,omitempty" json:"id"`
+	ID        bson.ObjectID             `bson:"_id,omitempty" json:"_id"`
 	Reference string                    `bson:"reference" json:"reference"`
 	Type      constants.TransactionType `bson:"type" json:"type"`
 	Note      string                    `bson:"note,omitempty" json:"note,omitempty"`
