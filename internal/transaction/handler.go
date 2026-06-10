@@ -134,6 +134,10 @@ func (h *Handler) GetOneByRefCurrentUser(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	refCode := chi.URLParam(r, "ref_code")
+	if len(refCode) != 14 {
+		response.ParseError(w, errmsg.ErrDataNotFound, h.log)
+		return
+	}
 
 	payload, err := middleware.GetPayloadUser(ctx)
 	if err != nil {
