@@ -19,3 +19,8 @@ type Wallet struct {
 	CreatedAt     time.Time              `bson:"created_at" json:"created_at"`
 	UpdatedAt     time.Time              `bson:"updated_at" json:"updated_at"`
 }
+
+type WalletWithUser struct {
+	Wallet `bson:",inline"`
+	User   User `bson:"user" json:"user"`
+}
