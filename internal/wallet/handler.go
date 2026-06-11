@@ -242,14 +242,6 @@ func (h *Handler) GetWalletByAccountNumber(w http.ResponseWriter, r *http.Reques
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	var userId *bson.ObjectID
-	userId = nil
-
-	payload, err := middleware.GetPayloadUser(ctx)
-	if err == nil {
-		userId = &payload.UserID
-	}
-
 	pNumber := chi.URLParam(r, "account_number")
 
 	if len(pNumber) != 12 {
@@ -257,7 +249,7 @@ func (h *Handler) GetWalletByAccountNumber(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	wallet, err := h.walletSvc.GetOneByAccountNumber(ctx, userId, pNumber)
+	wallet, err := h.walletSvc.GetOneByAccountNumber(ctx, pNumber)
 	if err != nil {
 		response.ParseError(w, err, h.log)
 		return

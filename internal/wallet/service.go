@@ -190,26 +190,15 @@ func (s *Service) Transfer(ctx context.Context, userId bson.ObjectID, data Trans
 	return &newTransaction, nil
 }
 
-func (s *Service) GetOneByAccountNumber(ctx context.Context, userId *bson.ObjectID, accountNumber string) (*entity.Wallet, error) {
-	var wallet entity.Wallet
+func (s *Service) GetOneByAccountNumber(ctx context.Context, accountNumber string) (*entity.WalletWithUser, error) {
+	var wallet entity.WalletWithUser
 
-	if userId != nil {
-		if err := s.walletRepo.FindByAccounNumberWithUser(ctx, *userId, accountNumber, &wallet); err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				return nil, errmsg.ErrDataNotFound
-			}
-			return nil, err
+	if err := s.walletRepo.FindByAccounNumberWithUser(ctx, accountNumber, &wallet); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errmsg.ErrDataNotFound
 		}
-	} else {
-		if err := s.walletRepo.FindByAccountNumber(ctx, accountNumber, constants.WalletActive, &wallet); err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				return nil, errmsg.ErrDataNotFound
-			}
-			return nil, err
-		}
+		return nil, err
 	}
-
-	wallet.Pin = ""
 
 	return &wallet, nil
 }

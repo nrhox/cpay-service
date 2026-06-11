@@ -18,7 +18,7 @@ type Repository interface {
 	Create(ctx context.Context, wallet *entity.Wallet) error
 	AvailableWalletPrimary(ctx context.Context, userId bson.ObjectID) (bool, error)
 	FindActiveByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
-	FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error
+	FindByAccounNumberWithUser(ctx context.Context, accountNumber string, data *entity.WalletWithUser) error
 	FindActiveByAccountNumber(ctx context.Context, accountNumber string, data *entity.Wallet) error
 	FindByAccountNumber(ctx context.Context, accountNumber string, status constants.WalletStatus, data *entity.Wallet) error
 	UpdateBalance(ctx context.Context, id bson.ObjectID, amount int) error
@@ -96,21 +96,56 @@ func (r *repository) FindActiveByAccounNumberWithUser(ctx context.Context, userI
 	return nil
 }
 
-func (r *repository) FindByAccounNumberWithUser(ctx context.Context, userId bson.ObjectID, accountNumber string, data *entity.Wallet) error {
-	filter := bson.M{
-		"account_number": accountNumber,
-		"user_id":        userId,
+func (r *repository) FindByAccounNumberWithUser(ctx context.Context, accountNumber string, data *entity.WalletWithUser) error {
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{
+			"account_number": accountNumber,
+			"status":         constants.WalletActive,
+		}}},
+		{{Key: "$lookup", Value: bson.M{
+			"from":         "users",
+			"localField":   "user_id",
+			"foreignField": "_id",
+			"as":           "user_array",
+		}}},
+
+		{{Key: "$unwind", Value: bson.M{
+			"path":                       "$user_array",
+			"preserveNullAndEmptyArrays": false,
+		}}},
+		{{Key: "$match", Value: bson.M{
+			"user_array.status": constants.UserActive,
+		}}},
+
+		{{Key: "$addFields", Value: bson.M{
+			"user": "$user_array",
+		}}},
+
+		{{Key: "$project", Value: bson.M{
+			"pin":                  0,
+			"user_array":           0,
+			"user.oauth_providers": 0,
+		}}},
 	}
 
-	res := r.collection.FindOne(ctx, filter)
-	if res.Err() != nil {
-		return res.Err()
-	}
-
-	if err := res.Decode(data); err != nil {
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
 		return err
 	}
-	return nil
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(data); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := cursor.Err(); err != nil {
+		return err
+	}
+
+	return mongo.ErrNoDocuments
 }
 
 func (r *repository) FindActiveByAccountNumber(ctx context.Context, accountNumber string, data *entity.Wallet) error {
