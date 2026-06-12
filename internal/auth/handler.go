@@ -98,7 +98,9 @@ var oauthErrorMapper = map[string]map[string]string{
 	"github": {
 		"access_denied":         "err_oauth_github_user_cancelled",
 		"application_suspended": "err_oauth_github_suspended",
-		"redirect_uri_mismatch": "err_oauth_github_config_error",
+		"redirect_uri_mismatch": "err_oauth_github_callback_url_mismatch",
+		"invalid_request":       "err_oauth_github_bad_request",
+		"invalid_scope":         "err_oauth_github_invalid_scope",
 	},
 }
 
