@@ -12,6 +12,12 @@ import (
 	"github.com/nrhox/cpay-service/internal/wallet"
 )
 
+const (
+	NORMAL_LIMIT    = 100
+	SEMI_HARD_LIMIT = 20
+	HARD_LIMIT      = 5
+)
+
 func NewRoute(
 	r *chi.Mux,
 	authH *auth.Handler,
@@ -23,17 +29,17 @@ func NewRoute(
 	m *middleware.Middlware,
 ) {
 	r.Route("/api/auth", func(r chi.Router) {
-		r.With(m.GuestOnly).Get("/{provider}", authH.Login)
-		r.With(m.InjectUser).Get("/{provider}/callback", authH.Callback)
-		r.With(m.IsAuth(true)).Post("/incomplate", authH.IncomplateRegister)
-		r.With(m.IsAuth(true)).Get("/__refresh", authH.RefreshToken)
-		r.With(m.IsAuth(false)).Get("/logout", authH.Logout)
+		r.With(m.RateLimit(HARD_LIMIT), m.GuestOnly).Get("/{provider}", authH.Login)
+		r.With(m.RateLimit(HARD_LIMIT), m.InjectUser).Get("/{provider}/callback", authH.Callback)
+		r.With(m.RateLimit(SEMI_HARD_LIMIT), m.IsAuth(true)).Post("/incomplate", authH.IncomplateRegister)
+		r.With(m.RateLimit(SEMI_HARD_LIMIT), m.IsAuth(true)).Get("/__refresh", authH.RefreshToken)
+		r.With(m.RateLimit(SEMI_HARD_LIMIT), m.IsAuth(false)).Get("/logout", authH.Logout)
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(m.AccessGuard(true))
 		r.Route("/admin", func(r chi.Router) {
-			r.Use(m.RoleFlag(constants.RoleAdmin))
+			r.Use(m.RateLimit(300), m.RoleFlag(constants.RoleAdmin))
 			r.Route("/user", func(r chi.Router) {
 				r.Get("/", userH.GetAllUser)
 				r.Get("/{id}", userH.GetOne)
@@ -57,29 +63,34 @@ func NewRoute(
 			})
 		})
 
-		r.Route("/wallet", func(r chi.Router) {
-			r.Post("/", walletH.NewWallet)
-			r.Get("/", walletH.GetMyWallet)
-			r.Get("/{account_number}", walletH.GetWalletByAccountNumber)
-			r.Put("/", walletH.SetPrimaryWallet)
-		})
+		r.Group(func(r chi.Router) {
+			r.Use(m.RateLimit(NORMAL_LIMIT), m.AccessGuard(true))
 
-		r.Route("/payment", func(r chi.Router) {
-			r.Get("/", paymentCode.GetAllMyCode)
-			r.Post("/", paymentCode.PayingCode)
-			r.Post("/create", paymentCode.CreatePaymentCode)
-			r.Get("/{code}", paymentCode.FindByCode)
-			r.Delete("/{code}/cancel", paymentCode.SetCancelByUser)
-		})
+			r.Route("/wallet", func(r chi.Router) {
+				r.Post("/", walletH.NewWallet)
+				r.Get("/", walletH.GetMyWallet)
+				r.Get("/{account_number}", walletH.GetWalletByAccountNumber)
+				r.Put("/", walletH.SetPrimaryWallet)
+			})
 
-		r.Route("/transaction", func(r chi.Router) {
-			r.Get("/{ref_code}", transactionH.GetOneByRefCurrentUser)
-			r.Get("/", transactionH.GetMyTransaction)
-			r.Get("/wallet/{account_number}", transactionH.GetMyTransactionByAccountNumber)
-		})
+			r.Route("/payment", func(r chi.Router) {
+				r.Get("/", paymentCode.GetAllMyCode)
+				r.Get("/{code}", paymentCode.FindByCode)
+				r.Delete("/{code}/cancel", paymentCode.SetCancelByUser)
 
-		r.Get("/me", userH.GetMe)
-		r.Post("/top-up", topUpH.RequestTopup)
-		r.Post("/transfer", walletH.TransferBalance)
+				r.With(m.RateLimit(HARD_LIMIT), m.ThrottleLimit()).Post("/", paymentCode.PayingCode)
+				r.With(m.RateLimit(HARD_LIMIT), m.ThrottleLimit()).Post("/create", paymentCode.CreatePaymentCode)
+			})
+
+			r.Route("/transaction", func(r chi.Router) {
+				r.Get("/{ref_code}", transactionH.GetOneByRefCurrentUser)
+				r.Get("/", transactionH.GetMyTransaction)
+				r.Get("/wallet/{account_number}", transactionH.GetMyTransactionByAccountNumber)
+			})
+
+			r.Get("/me", userH.GetMe)
+			r.With(m.RateLimit(SEMI_HARD_LIMIT)).Post("/top-up", topUpH.RequestTopup)
+			r.With(m.RateLimit(HARD_LIMIT), m.ThrottleLimit()).Post("/transfer", walletH.TransferBalance)
+		})
 	})
 }

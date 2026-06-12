@@ -43,8 +43,10 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(setupCORS(cfg))
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	if cfg.Mode == config.MODE_DEBUG {
+		r.Use(middleware.Logger)
+	}
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello"))
