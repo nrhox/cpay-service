@@ -41,7 +41,13 @@ func (b *Bootstrap) Init() {
 	snowflake := utils.NewSnowflake(int64(b.Cfg.SnowFlakeEpoch))
 	referenceGen := utils.NewReferenceCode()
 
-	providers.NewGitHubProvider(b.Cfg.Providers.Github)
+	if b.Cfg.Providers.Github != nil && b.Cfg.Providers.Github.ClientSecret != "" {
+		providers.NewGitHubProvider(b.Cfg.Providers.Github)
+	}
+
+	if b.Cfg.Providers.Google != nil && b.Cfg.Providers.Google.ClientSecret != "" {
+		providers.NewGoogleProvider(b.Cfg.Providers.Google)
+	}
 
 	userRepo := user.NewRepository(b.DB)
 	sessionRepo := session.NewRepository(b.DB)
