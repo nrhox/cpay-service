@@ -44,7 +44,7 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) RedirectToFrontendError(w http.ResponseWriter, r *http.Request, reason string) {
+func (h *Handler) RedirectToFrontendError(w http.ResponseWriter, r *http.Request, errorKey string) {
 	u, err := url.Parse(h.frontendUrl + constants.LOGIN_PAGE)
 	if err != nil {
 		response.ParseError(w, errmsg.ErrInternalServer, nil)
@@ -52,7 +52,7 @@ func (h *Handler) RedirectToFrontendError(w http.ResponseWriter, r *http.Request
 	}
 
 	q := u.Query()
-	q.Set("reason", reason)
+	q.Set("error", errorKey)
 
 	u.RawQuery = q.Encode()
 
@@ -77,6 +77,31 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectUrl, http.StatusTemporaryRedirect)
 }
 
+var oauthErrorMapper = map[string]map[string]string{
+	"google": {
+		"access_denied": "err_oauth_google_limit_or_cancel",
+
+		"invalid_request": "err_oauth_google_bad_request",
+
+		"invalid_scope": "err_oauth_google_invalid_scope",
+
+		"unsupported_response_type": "err_oauth_google_unsupported_type",
+
+		"server_error": "err_oauth_google_server_down",
+
+		"temporarily_unavailable": "err_oauth_google_retry_later",
+
+		"invalid_grant":         "err_oauth_google_code_expired_or_used",
+		"invalid_client":        "err_oauth_google_wrong_client_credentials",
+		"redirect_uri_mismatch": "err_oauth_google_callback_url_mismatch",
+	},
+	"github": {
+		"access_denied":         "err_oauth_github_user_cancelled",
+		"application_suspended": "err_oauth_github_suspended",
+		"redirect_uri_mismatch": "err_oauth_github_config_error",
+	},
+}
+
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
@@ -95,6 +120,25 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		provider := providers.Get(providerName)
 		if provider == nil {
 			h.RedirectToFrontendError(w, r, "err_oauth_unsupport")
+			return
+		}
+
+		if oauthErr := r.FormValue("error"); oauthErr != "" {
+			h.log.Error("OAuth provider %s returned error: %s", providerName, oauthErr)
+
+			finalGenericKey := "err_oauth_provider_" + oauthErr
+
+			if providerErrors, providerExists := oauthErrorMapper[providerName]; providerExists {
+				if genericKey, errorExists := providerErrors[oauthErr]; errorExists {
+					finalGenericKey = genericKey
+				} else {
+					finalGenericKey = "err_oauth_auth_process_failed"
+				}
+			} else {
+				finalGenericKey = "err_oauth_auth_process_failed"
+			}
+
+			h.RedirectToFrontendError(w, r, finalGenericKey)
 			return
 		}
 

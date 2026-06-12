@@ -94,6 +94,10 @@ func (h *GitHubProvider) ExchangeCodeForUser(ctx context.Context, code string) (
 		}
 		defer emailResp.Body.Close()
 
+		if resp.StatusCode != http.StatusOK {
+			return nil, errmsg.ErrGithubApi
+		}
+
 		emailBody, err := io.ReadAll(emailResp.Body)
 		if err != nil {
 			return nil, err
