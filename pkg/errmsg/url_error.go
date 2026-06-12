@@ -9,4 +9,5 @@ var (
 	ErrOauthAuthProcessFailed = errors.New("authentication subsystem error")
 	ErrOauthEmailNotVerify    = errors.New("email not verified")
 	ErrInComplateUserRegister = errors.New("anda belum melengkapi formulir")
+	ErrGithubApi              = errors.New("terjadi kesalahan saat masuk menggunakan github")
 )
