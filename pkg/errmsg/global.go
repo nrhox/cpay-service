@@ -17,4 +17,5 @@ var (
 	ErrPinNoMatch                 = errors.New("pin tidak cocok")
 	ErrUncomplateForm             = errors.New("formulir tidak lengkap")
 	ErrPaymentCodeNotFound        = errors.New("kode pembayaran tidak ditemukan")
+	ErrMaxCreatedWallet           = errors.New("telah mencapai batas maksimal")
 )

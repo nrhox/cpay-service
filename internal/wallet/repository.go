@@ -41,7 +41,21 @@ func NewRepository(db *mongo.Database, snowId *utils.Snowflake) Repository {
 	}
 }
 
+const MAX_WALLET = 4
+
 func (r *repository) Create(ctx context.Context, wallet *entity.Wallet) error {
+	filter := bson.M{
+		"user_id": wallet.UserID,
+	}
+	count, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if count >= MAX_WALLET {
+		return errmsg.ErrMaxCreatedWallet
+	}
+
 	wallet.Balance = 0
 	wallet.AccountNumber = r.snowId.NextID()
 	wallet.CreatedAt = time.Now()

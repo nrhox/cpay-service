@@ -55,6 +55,9 @@ func (s *Service) CreateWallet(ctx context.Context, userId bson.ObjectID, dto Cr
 	}
 
 	if err := s.walletRepo.Create(ctx, &newWallet); err != nil {
+		if errors.Is(err, errmsg.ErrMaxCreatedWallet) {
+			return nil, err
+		}
 		s.log.Error(err.Error())
 		return nil, err
 	}

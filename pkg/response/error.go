@@ -121,6 +121,17 @@ var listError = []ErrorWithResponse{
 			},
 		},
 	},
+	{
+		Err:        errmsg.ErrMaxCreatedWallet,
+		StatusCode: http.StatusBadRequest,
+		Message:    errmsg.ErrUncomplateForm.Error(),
+		Errors: []validation.ErrorField{
+			{
+				Field:   "wallet_name",
+				Message: errmsg.ErrMaxCreatedWallet.Error(),
+			},
+		},
+	},
 }
 
 func ParseError(w http.ResponseWriter, err error, log *slog.Logger) {
