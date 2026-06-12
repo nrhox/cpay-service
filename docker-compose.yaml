@@ -5,10 +5,3 @@ services:
       - "8043:3002"
     env_file:
       - .env.staged
-    networks:
-      - cpay-channels
-
-networks:
-  cpay-channels:
-    external: true
-    name: cpay-network
