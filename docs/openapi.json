@@ -1,0 +1,2434 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CPay Bank Service API",
+    "description": "API documentation for the CPay Bank Service, an electronic wallet and banking application built using Go, chi, and MongoDB.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root Endpoint",
+        "description": "A simple health check or welcome endpoint returning a plain text message.",
+        "responses": {
+          "200": {
+            "description": "A plain text welcome response.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "hello"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/{provider}": {
+      "get": {
+        "summary": "Initiate OAuth Login",
+        "description": "Redirects the client to the specified OAuth provider's authorization page (e.g. github, google).",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "description": "The name of the OAuth provider (e.g. google, github)",
+            "schema": {
+              "type": "string",
+              "enum": ["google", "github"]
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Temporary Redirect to the OAuth provider login page."
+          }
+        }
+      }
+    },
+    "/api/auth/{provider}/callback": {
+      "get": {
+        "summary": "OAuth Callback",
+        "description": "Callback endpoint invoked by the OAuth provider. Processes the state/code and logs the user in, setting the refresh token in HTTP-only cookies. Redirects the client back to the frontend.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "description": "The name of the OAuth provider",
+            "schema": {
+              "type": "string",
+              "enum": ["google", "github"]
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "State parameter passed back by OAuth provider to protect against CSRF.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "description": "Authorization code exchanged for access token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success response when simulated/injected user is active.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "enum": ["ok", "incomplate"]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "307": {
+            "description": "Temporary Redirect to frontend (home page or /auth/login/incomplate for incomplete registers)."
+          }
+        }
+      }
+    },
+    "/api/auth/incomplate": {
+      "post": {
+        "summary": "Complete Registration",
+        "description": "Completes registration for a user whose status is 'UNCOMPLATE' by creating their first wallet and PIN.",
+        "security": [
+          {
+            "cookieRefreshAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWallet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registration completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "complate the form"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON or validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/auth/__refresh": {
+      "get": {
+        "summary": "Refresh Access Token",
+        "description": "Refreshes and returns a new Access Token. It reads the Refresh Token from cookies and sets a new Access Token in the cookies.",
+        "security": [
+          {
+            "cookieRefreshAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully.",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string",
+                  "example": "__Cat_Baik=token_value; Path=/; HttpOnly; SameSite=Lax"
+                },
+                "description": "Sets the access token cookie."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "description": "New access token"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Incomplete registration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "get": {
+        "summary": "Logout User",
+        "description": "Logs out the current user, invalidates their session, and deletes auth cookies.",
+        "security": [
+          {
+            "cookieRefreshAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully logged out.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "ok"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "summary": "Get Current User Profile",
+        "description": "Retrieves the profile information of the currently authenticated user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/wallet": {
+      "get": {
+        "summary": "Get My Wallets",
+        "description": "Retrieves all wallets owned by the currently authenticated user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallets retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Wallet"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Wallet",
+        "description": "Creates a new wallet for the currently authenticated user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWallet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Wallet created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Wallet"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or validation error."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      },
+      "put": {
+        "summary": "Set Primary Wallet",
+        "description": "Sets one of the user's wallets as the primary wallet.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPrimaryWallet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Primary wallet successfully set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/{account_number}": {
+      "get": {
+        "summary": "Get Wallet by Account Number",
+        "description": "Fetches wallet details using its 12-digit account number.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_number",
+            "in": "path",
+            "required": true,
+            "description": "The 12-digit account number of the wallet",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Wallet"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Wallet not found."
+          }
+        }
+      }
+    },
+    "/api/v1/top-up": {
+      "post": {
+        "summary": "Request Top-Up",
+        "description": "Submits a request to top up a wallet. Requires approval from an administrator to complete.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestTopup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Top-up request created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TopupRequest"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/transfer": {
+      "post": {
+        "summary": "Transfer Balance",
+        "description": "Transfers funds from the current user's wallet to a destination wallet using its account number.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferBalance"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer completed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Transaction"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (insufficient balance, incorrect PIN, invalid destination wallet)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/payment": {
+      "get": {
+        "summary": "Get My Payment Codes",
+        "description": "Lists all payment codes generated by the current user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search keyword",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort field",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Sort order (asc/desc)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Records per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment codes successfully retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PaymentCode"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      },
+      "post": {
+        "summary": "Pay Payment Code",
+        "description": "Pays an active payment code created by another user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePayingTransaction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Transaction"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid PIN, code expired/cancelled, or insufficient funds."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/payment/create": {
+      "post": {
+        "summary": "Create Payment Code",
+        "description": "Generates a unique 14-digit payment code (starting with 'PY') that other users can pay.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentCode"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment code created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaymentCode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/payment/{code}": {
+      "get": {
+        "summary": "Find Payment Code Details",
+        "description": "Retrieves the public details of a payment code using the 14-digit string.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "The 14-digit payment code string starting with PY",
+            "schema": {
+              "type": "string",
+              "pattern": "^PY[0-9]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment code details retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaymentCode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Payment code not found."
+          }
+        }
+      }
+    },
+    "/api/v1/payment/{code}/cancel": {
+      "delete": {
+        "summary": "Cancel Payment Code",
+        "description": "Allows the creator of a payment code to cancel it.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "The 14-digit payment code string",
+            "schema": {
+              "type": "string",
+              "pattern": "^PY[0-9]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment code cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (not the owner of the code)."
+          }
+        }
+      }
+    },
+    "/api/v1/transaction": {
+      "get": {
+        "summary": "Get My Transactions",
+        "description": "Retrieves the transaction history of the current user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search keyword",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort field",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Sort order (asc/desc)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Records per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transactions retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Transaction"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/transaction/{ref_code}": {
+      "get": {
+        "summary": "Get Transaction by Reference",
+        "description": "Retrieves detailed information of a transaction using its reference code.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ref_code",
+            "in": "path",
+            "required": true,
+            "description": "The transaction reference code",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Transaction"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Transaction not found."
+          }
+        }
+      }
+    },
+    "/api/v1/transaction/wallet/{account_number}": {
+      "get": {
+        "summary": "Get Wallet Transactions",
+        "description": "Retrieves the transaction history associated with a specific wallet account number.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_number",
+            "in": "path",
+            "required": true,
+            "description": "The 12-digit account number of the wallet",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{12}$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search keyword",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort field",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Sort order (asc/desc)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Records per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet transactions retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Transaction"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/user": {
+      "get": {
+        "summary": "Admin: Get All Users",
+        "description": "Admin only endpoint to retrieve all registered users (paginated).",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Sort order",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All users list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Admin role required)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/user/{id}": {
+      "get": {
+        "summary": "Admin: Get User by ID",
+        "description": "Admin only endpoint to retrieve details of a specific user. (Cannot retrieve self details here).",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "User not found or requesting own profile."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/user/{id}/wallet": {
+      "get": {
+        "summary": "Admin: Get User's Wallets",
+        "description": "Admin only endpoint to retrieve all wallets of a specific user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User's wallets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Wallet"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/user/{id}/suspend": {
+      "put": {
+        "summary": "Admin: Suspend User Wallets",
+        "description": "Admin only endpoint to suspend a user's account/wallets.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ObjectID to suspend",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User suspended successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/user/{id}/active": {
+      "put": {
+        "summary": "Admin: Activate User Wallets",
+        "description": "Admin only endpoint to activate a suspended user account/wallets.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ObjectID to activate",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User activated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/top-up": {
+      "get": {
+        "summary": "Admin: List All Top-Up Requests",
+        "description": "Admin only endpoint to list all top-up requests.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top-up requests list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TopupRequest"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/top-up/{id}": {
+      "get": {
+        "summary": "Admin: Get Top-Up Request",
+        "description": "Admin only endpoint to get details of a specific top-up request.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Top-up request ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top-up request details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TopupRequest"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/top-up/{id}/approved": {
+      "put": {
+        "summary": "Admin: Approve Top-Up Request",
+        "description": "Admin only endpoint to approve a pending top-up request. This adds balance to the user's wallet.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Top-up request ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top-up request approved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TopupRequest"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/top-up/{id}/reject": {
+      "put": {
+        "summary": "Admin: Reject Top-Up Request",
+        "description": "Admin only endpoint to reject a pending top-up request.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Top-up request ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top-up request rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TopupRequest"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payment-code": {
+      "get": {
+        "summary": "Admin: List All Payment Codes",
+        "description": "Admin only endpoint to view all generated payment codes.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment codes list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PaymentCode"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payment-code/{id}": {
+      "get": {
+        "summary": "Admin: Get Payment Code",
+        "description": "Admin only endpoint to get details of a specific payment code.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Payment code ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment code details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJson"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PaymentCode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payment-code/user/{id}": {
+      "get": {
+        "summary": "Admin: List User's Payment Codes",
+        "description": "Admin only endpoint to view payment codes generated by a specific user.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "User ObjectID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User's payment codes list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ResJsonPaginate"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PaymentCode"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payment-code/{id}/cancel": {
+      "delete": {
+        "summary": "Admin: Cancel Payment Code",
+        "description": "Admin only endpoint to cancel a payment code.",
+        "security": [
+          {
+            "bearerAuth": [],
+            "cookieAccessAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Payment code ObjectID to cancel",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment code cancelled successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResJson"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAccessAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Cat_Baik",
+        "description": "Access token stored in cookies."
+      },
+      "cookieRefreshAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Cat_Garong",
+        "description": "Refresh token stored in cookies."
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "role": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "User roles represented as flags: 1 = RoleUser (1<<0), 2 = RoleAdmin (1<<1).",
+            "example": 1
+          },
+          "full_name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john.doe@example.com"
+          },
+          "avatar_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://avatars.githubusercontent.com/u/12345"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "SUSPENDED", "UNCOMPLATE"],
+            "example": "ACTIVE"
+          },
+          "oauth_providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuthProvider"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthProvider": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "12345678"
+          },
+          "provider": {
+            "type": "string",
+            "example": "github"
+          }
+        }
+      },
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "user_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "name": {
+            "type": "string",
+            "example": "My Wallet"
+          },
+          "account_number": {
+            "type": "string",
+            "example": "100029381729"
+          },
+          "balance": {
+            "type": "integer",
+            "example": 500000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "SUSPENDED"],
+            "example": "ACTIVE"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "example": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "TransactionParty": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "username": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "wallet_name": {
+            "type": "string",
+            "example": "My Wallet"
+          },
+          "account_number": {
+            "type": "string",
+            "example": "100029381729"
+          },
+          "balance_before": {
+            "type": "integer",
+            "example": 100000
+          },
+          "balance_after": {
+            "type": "integer",
+            "example": 90000
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "reference": {
+            "type": "string",
+            "example": "TF1772298000000"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["TOPUP", "TRANSFER", "PAYMENT"],
+            "example": "TRANSFER"
+          },
+          "note": {
+            "type": "string",
+            "example": "Split bill"
+          },
+          "amount": {
+            "type": "integer",
+            "example": 10000
+          },
+          "currency": {
+            "type": "string",
+            "example": "IDR"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "SUCCESS", "FAILED", "CANCELLED"],
+            "example": "SUCCESS"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TransactionParty"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/TransactionParty"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TopupRequest": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "user_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "amount": {
+            "type": "integer",
+            "example": 50000
+          },
+          "reference": {
+            "type": "string",
+            "example": "TP1772298000000"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "SUCCESS", "FAILED", "CANCELLED"],
+            "example": "PENDING"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaymentCode": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "user_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "merchant": {
+            "type": "string",
+            "example": "Coffee Shop"
+          },
+          "code": {
+            "type": "string",
+            "example": "PY123456789012"
+          },
+          "amount": {
+            "type": "integer",
+            "example": 25000
+          },
+          "note": {
+            "type": "string",
+            "example": "Espresso"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "PAID", "CANCELLED", "EXPIRED"],
+            "example": "ACTIVE"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateWallet": {
+        "type": "object",
+        "required": ["wallet_name", "pin"],
+        "properties": {
+          "wallet_name": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9 ]+$",
+            "description": "Alphanumeric characters and spaces only.",
+            "example": "Main Wallet"
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "description": "6-digit numerical security PIN.",
+            "example": "123456"
+          }
+        }
+      },
+      "SetPrimaryWallet": {
+        "type": "object",
+        "required": ["wallet_id"],
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          }
+        }
+      },
+      "TransferBalance": {
+        "type": "object",
+        "required": ["wallet_id", "destination", "amount", "pin"],
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "description": "Source wallet ObjectID.",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "destination": {
+            "type": "string",
+            "pattern": "^[0-9]{12}$",
+            "description": "12-digit destination wallet account number.",
+            "example": "100029381729"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 50000
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "Split bill"
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "example": "123456"
+          }
+        }
+      },
+      "RequestTopup": {
+        "type": "object",
+        "required": ["wallet_number", "amount"],
+        "properties": {
+          "wallet_number": {
+            "type": "string",
+            "pattern": "^[0-9]{12}$",
+            "example": "100029381729"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 100000
+          }
+        }
+      },
+      "CreatePaymentCode": {
+        "type": "object",
+        "required": ["wallet_id", "amount"],
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 25000
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "Latte payment"
+          }
+        }
+      },
+      "CreatePayingTransaction": {
+        "type": "object",
+        "required": ["wallet_id", "payment_code", "pin"],
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "example": "60b8d29f1b2c3d4e5f6a7b8c"
+          },
+          "payment_code": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{14}$",
+            "example": "PY123456789012"
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "example": "123456"
+          }
+        }
+      },
+      "ResJson": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string",
+            "example": "Success"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorField"
+            }
+          }
+        }
+      },
+      "ValidationErrorField": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "pin"
+          },
+          "message": {
+            "type": "string",
+            "example": "pin harus berupa 6 angka"
+          }
+        }
+      },
+      "ResMetaPaginate": {
+        "type": "object",
+        "properties": {
+          "total_page": {
+            "type": "integer",
+            "example": 5
+          },
+          "total_data": {
+            "type": "integer",
+            "example": 48
+          }
+        }
+      },
+      "ResJsonPaginate": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Success get all"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorField"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResMetaPaginate"
+          }
+        }
+      }
+    }
+  }
+}
