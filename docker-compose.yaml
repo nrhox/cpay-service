@@ -1,0 +1,7 @@
+services:
+  backend-cpay:
+    build: .
+    ports:
+      - "8043:3002"
+    env_file:
+      - .env.staged
