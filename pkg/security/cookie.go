@@ -20,7 +20,7 @@ func SetRefreshToken(w http.ResponseWriter, d time.Duration, token string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		Expires:  time.Now().Add(d),
 	})
 }
@@ -42,7 +42,7 @@ func SetAccessToken(w http.ResponseWriter, d time.Duration, token string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		Expires:  time.Now().Add(d),
 	})
 }
