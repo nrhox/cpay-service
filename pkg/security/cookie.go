@@ -32,6 +32,7 @@ func DeleteRefreshToken(w http.ResponseWriter) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
 	})
 }
 
@@ -54,6 +55,7 @@ func DeleteAccessToken(w http.ResponseWriter) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
 	})
 }
 
