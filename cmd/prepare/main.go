@@ -9,18 +9,17 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"time"
 )
 
 func generateSaltKey(length int) (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~"
 	bytes := make([]byte, length)
+
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	for i, b := range bytes {
-		bytes[i] = charset[b%byte(len(charset))]
-	}
-	return string(bytes), nil
+
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
 func convertDERToPEMBase64URL(blockType string, derBytes []byte) (string, error) {
@@ -64,12 +63,19 @@ func main() {
 		log.Fatalf("failed to process private key: %v", err)
 	}
 
-	saltKey, err := generateSaltKey(80)
+	hashKey, err := generateSaltKey(64)
 	if err != nil {
-		log.Fatalf("failed generate salt key: %v", err)
+		log.Fatalf("failed generate hssh key: %v", err)
+	}
+
+	blockKey, err := generateSaltKey(32)
+	if err != nil {
+		log.Fatalf("failed generate block key: %v", err)
 	}
 
 	fmt.Printf("PUBLIC_KEY: %s\n", pubBase64URL)
 	fmt.Printf("PRIVATE_KEY: %s\n", privBase64URL)
-	fmt.Printf("SALT_KEY: %s\n", saltKey)
+	fmt.Printf("HASH_KEY: %s\n", hashKey)
+	fmt.Printf("BLOCK_KEY: %s\n", blockKey)
+	fmt.Printf("SNOW_FLAKE_EPOCH: %d\n", time.Now().UnixMilli())
 }
