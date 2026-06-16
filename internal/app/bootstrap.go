@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/securecookie"
 	"github.com/nrhox/cpay-service/internal/auth"
 	"github.com/nrhox/cpay-service/internal/config"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
@@ -40,6 +41,7 @@ func (b *Bootstrap) Init() {
 
 	snowflake := utils.NewSnowflake(int64(b.Cfg.SnowFlakeEpoch))
 	referenceGen := utils.NewReferenceCode()
+	sCookie := securecookie.New([]byte(b.Cfg.Session.HashKey), []byte(b.Cfg.Session.BlocKey))
 
 	if b.Cfg.Providers.Github != nil && b.Cfg.Providers.Github.ClientSecret != "" {
 		providers.NewGitHubProvider(b.Cfg.Providers.Github)
@@ -64,7 +66,7 @@ func (b *Bootstrap) Init() {
 	paymentCodeService := payment_code.NewService(paymentCodeRepo, walletRepo, userRepo, transactionRepo, b.Logger)
 	transactionService := transaction.NewService(transactionRepo, b.Logger)
 
-	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager)
+	authHandler := auth.NewHandler(authService, b.Logger, &b.Cfg.Session, b.Cfg.FrontendUrl, tokenManager, sCookie)
 	userHandler := user.NewHandler(userService, b.Logger)
 	topUpHandler := topup_request.NewHandler(topUpService, b.Logger)
 	walletHandler := wallet.NewHandler(walletService, b.Logger)

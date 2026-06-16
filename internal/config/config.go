@@ -53,9 +53,11 @@ func Load() *Config {
 		Session: Session{
 			RefreshDuration:     getDurationEnv("SESSION_REFRESH_DURATION", 30*24*time.Hour),
 			AccessTokenDuration: getDurationEnv("SESSION_ACCESS_DURATION", 5*time.Minute),
+			OauthStateDuration:  getDurationEnv("SESSION_OAUTH_STATE_DURATION", 5*time.Minute),
 			JwtPublicKey:        getSecret("JWT_PUBLIC_KEY"),
 			JwtPrivateKey:       getSecret("JWT_PRIVATE_KEY"),
-			SaltKey:             os.Getenv("SALT_KEY"),
+			HashKey:             getSecret("HASH_KEY"),
+			BlocKey:             getSecret("BLOCK_KEY"),
 		},
 		Providers: Providers{
 			Google: &OauthConfig{
