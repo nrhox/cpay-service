@@ -11,6 +11,7 @@ import (
 const (
 	COOKIE_REFRESH_TOKEN = "__Cat_Garong"
 	COOKIE_ACCESS_TOKEN  = "__Cat_Baik"
+	COOKIE_OAUTH_STATE   = "__Cat_Asli"
 )
 
 func SetRefreshToken(w http.ResponseWriter, d time.Duration, token string) {
@@ -61,6 +62,30 @@ func DeleteAccessToken(w http.ResponseWriter) {
 	})
 }
 
+func SetOauthState(w http.ResponseWriter, d time.Duration, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     COOKIE_OAUTH_STATE,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+		Expires:  time.Now().Add(d),
+	})
+}
+
+func DeleteOauthState(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     COOKIE_OAUTH_STATE,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+	})
+}
+
 func GetRefreshToken(r *http.Request) (token string, id bson.ObjectID) {
 	cookie, err := r.Cookie(COOKIE_REFRESH_TOKEN)
 	if err != nil {
@@ -82,6 +107,14 @@ func GetRefreshToken(r *http.Request) (token string, id bson.ObjectID) {
 
 func GetAccessToken(r *http.Request) string {
 	cookie, err := r.Cookie(COOKIE_ACCESS_TOKEN)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
+func GetOauthState(r *http.Request) string {
+	cookie, err := r.Cookie(COOKIE_OAUTH_STATE)
 	if err != nil {
 		return ""
 	}

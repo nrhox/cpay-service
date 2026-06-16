@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/securecookie"
 	"github.com/nrhox/cpay-service/internal/config"
 	"github.com/nrhox/cpay-service/internal/constants"
 	"github.com/nrhox/cpay-service/internal/delivery/middleware"
@@ -26,6 +29,7 @@ type Handler struct {
 	sessionConfig *config.Session
 	frontendUrl   string
 	tokenManager  *security.TokenManager
+	sCookie       *securecookie.SecureCookie
 }
 
 func NewHandler(
@@ -34,6 +38,7 @@ func NewHandler(
 	sessionConfig *config.Session,
 	frontendUrl string,
 	tokenManager *security.TokenManager,
+	sCookie *securecookie.SecureCookie,
 ) *Handler {
 	return &Handler{
 		authSvc:       authSvc,
@@ -41,6 +46,7 @@ func NewHandler(
 		sessionConfig: sessionConfig,
 		frontendUrl:   frontendUrl,
 		tokenManager:  tokenManager,
+		sCookie:       sCookie,
 	}
 }
 
@@ -71,7 +77,18 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stateString := security.GenerateDynamicToken(h.sessionConfig.SaltKey) + "__" + providerName
+	b := make([]byte, 16)
+	rand.Read(b)
+	stateString := base64.RawURLEncoding.EncodeToString(b)
+
+	encode, err := h.sCookie.Encode(security.COOKIE_OAUTH_STATE, stateString)
+	if err != nil {
+		h.log.Error(err.Error())
+		h.RedirectToFrontendError(w, r, "err_oauth_auth_process_failed")
+		return
+	}
+
+	security.SetOauthState(w, h.sessionConfig.OauthStateDuration, encode)
 	redirectUrl := provider.GetLoginURL(stateString)
 
 	http.Redirect(w, r, redirectUrl, http.StatusTemporaryRedirect)
@@ -145,8 +162,24 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		state := r.FormValue("state")
-		state = strings.TrimSuffix(state, "__"+providerName)
-		if !security.ValidateDynamicToken(state, h.sessionConfig.SaltKey) {
+		if state == "" {
+			h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
+			return
+		}
+
+		oauthStateCookie := security.GetOauthState(r)
+		if oauthStateCookie == "" {
+			h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
+			return
+		}
+
+		var stateFromSession string
+		if err := h.sCookie.Decode(security.COOKIE_OAUTH_STATE, oauthStateCookie, &stateFromSession); err != nil {
+			h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
+			return
+		}
+
+		if stateFromSession != state {
 			h.RedirectToFrontendError(w, r, "err_oauth_invalid_state")
 			return
 		}
@@ -173,6 +206,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	security.DeleteOauthState(w)
 	security.SetRefreshToken(w, h.sessionConfig.RefreshDuration, session.Token+"."+strings.ToUpper(session.ID.Hex()))
 
 	if userInject == nil {
