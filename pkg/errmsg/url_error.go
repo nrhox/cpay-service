@@ -10,4 +10,5 @@ var (
 	ErrOauthEmailNotVerify    = errors.New("email not verified")
 	ErrInComplateUserRegister = errors.New("anda belum melengkapi formulir")
 	ErrGithubApi              = errors.New("terjadi kesalahan saat masuk menggunakan github")
+	ErrAccountSuspend         = errors.New("maaf akun anda ditangguhkan")
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -21,6 +22,7 @@ import (
 	"github.com/nrhox/cpay-service/pkg/response"
 	"github.com/nrhox/cpay-service/pkg/rest"
 	"github.com/nrhox/cpay-service/pkg/security"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Handler struct {
@@ -202,6 +204,10 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	session, isComplate, err := h.authSvc.LoginUser(ctx, profile)
 	if err != nil {
+		if errors.Is(err, errmsg.ErrAccountSuspend) {
+			h.RedirectToFrontendError(w, r, "err_account_suspend")
+			return
+		}
 		h.RedirectToFrontendError(w, r, "err_oauth_auth_process_failed")
 		return
 	}
@@ -244,6 +250,10 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authSvc.RefreshToken(ctx, credential.Id, credential.Token)
 	if err != nil {
+		if errors.Is(err, errmsg.ErrUserNotFound) || errors.Is(err, mongo.ErrNoDocuments) {
+			security.DeleteRefreshToken(w)
+			security.DeleteAccessToken(w)
+		}
 		response.ParseError(w, err, h.log)
 		return
 	}

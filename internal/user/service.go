@@ -34,6 +34,10 @@ func (s *Service) Upsert(ctx context.Context, info UserInfo, provider entity.Aut
 		}
 	}
 
+	if !user.ID.IsZero() && user.Status == constants.UserSuspended {
+		return nil, errmsg.ErrAccountSuspend
+	}
+
 	if !user.ID.IsZero() {
 		isInsert := false
 		for _, prov := range user.OAuthProviders {

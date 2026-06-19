@@ -53,6 +53,9 @@ func (s *Service) LoginUser(ctx context.Context, data *providers.Profile) (sessi
 
 	newUser, err := s.userSvc.Upsert(ctx, user, prov)
 	if err != nil {
+		if errors.Is(err, errmsg.ErrAccountSuspend) {
+			return nil, false, err
+		}
 		s.log.Error(err.Error())
 		return nil, false, errmsg.ErrOauthAuthProcessFailed
 	}
